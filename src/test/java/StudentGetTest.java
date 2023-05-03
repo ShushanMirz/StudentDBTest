@@ -1,23 +1,34 @@
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
-import org.example.Uploads;
 import org.testng.ITestContext;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
 
 import java.lang.reflect.Method;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.in;
 
 public class StudentGetTest extends Config {
     String tokenUser ;
     String tokenAdmin ;
     String studentId = "";
-    Uploads uploads = new Uploads();
     Randomize random = new Randomize();
     Config config = new Config();
+    MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
+    MongoDatabase database = mongoClient.getDatabase("studentsdb");
+    MongoCollection<Document> collection = database.getCollection("students");
+
+
+    String invalidId = "64495cb47b845b5eab714268";
 
 
 
@@ -69,14 +80,21 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentsAuth() {
+        long expectedCount = collection.countDocuments();
 
-
-        given()
+       given()
                 .header("Authorization", tokenUser)
-                .when()
+                .queryParam("page", 1)
+                .queryParam("pageSize", 50)
+
+      .when()
                 .get(Endpoint.All_Students)
-                .then()
-                .assertThat().statusCode(200);
+      .then()
+                .assertThat().statusCode(200)
+                .body("size()", equalTo(expectedCount));
+
+
+
 
     }
 
@@ -85,10 +103,12 @@ public class StudentGetTest extends Config {
 
 
         given()
+                .queryParam("page", 1)
+                .queryParam("pageSize", 50)
 
-                .when()
+        .when()
                 .get(Endpoint.All_Students)
-                .then()
+        .then()
                 .assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
@@ -96,16 +116,20 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentsByFirstNameAuth() {
-        //queryParams should take from db
+        Document firstDocument = collection.find().first();
+        String firstName = firstDocument.getString("firstName");
+        System.out.println(firstName);
 
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("firstName", " ")
+                .queryParam("firstName", firstName)
+                .queryParam("page", 1)
+                .queryParam("pageSize", 50)
 
-                .when()
+        .when()
                 .get(Endpoint.All_Students)
-                .then()
+        .then()
                 .assertThat().statusCode(200);
 
     }
@@ -119,9 +143,11 @@ public class StudentGetTest extends Config {
         given()
                 .header("Authorization", tokenUser)
                 .queryParam("lastName", " ")
-                .when()
+                .queryParam("page", 1)
+                .queryParam("pageSize", 50)
+       .when()
                 .get(Endpoint.All_Students)
-                .then()
+       .then()
                 .assertThat().statusCode(200);
 
     }
@@ -365,7 +391,7 @@ public class StudentGetTest extends Config {
     }
     @Test
     public void verifyGetStudentsInvalidIdAuth() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -415,7 +441,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentIdByPassportNotFoundAuth() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -461,7 +487,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentIdEmergencyContactAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -507,7 +533,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentEducationInfoAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -553,7 +579,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentWorkExpAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -600,7 +626,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentAdmissionHistoryAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -648,7 +674,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentExamHistoryAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -697,7 +723,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentCommLogsAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -746,7 +772,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentCurrentGroupsAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -795,7 +821,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentPreviousGroupsAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -841,8 +867,8 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentBadgesAuthNotFound() {
-        studentId = random.getRndId();
-        System.out.println(tokenUser);
+        studentId = invalidId;
+
 
         given()
                 .header("Authorization", tokenUser)
@@ -889,7 +915,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentTaAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -938,7 +964,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentInDiInterviewsAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -986,7 +1012,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentSkillsAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -1035,7 +1061,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentNotesAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -1083,7 +1109,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentPaymentsAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)
@@ -1131,7 +1157,7 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentDepartmentsAuthNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenUser)

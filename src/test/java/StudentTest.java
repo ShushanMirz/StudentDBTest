@@ -1,38 +1,73 @@
-import org.example.Config;
-import org.example.Endpoint;
-import org.example.Randomize;
-import org.example.Uploads;
+import org.example.*;
 import org.testng.ITestContext;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import java.lang.reflect.Method;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 
-public class StudentTest extends Config {
+public class StudentTest extends ConfigMeta {
 
     String tokenUser = "";
     String tokenAdmin = "";
     String studentId = "";
     Uploads uploads = new Uploads();
     Randomize random = new Randomize();
+    String invalidId = "64495cb47b845b5eab714268";
 
 
 
 
-    @BeforeMethod
-    public void setToken (Method methodName, ITestContext context) {
-        if (methodName.getName().contains("Admin")) {
+    @BeforeClass
+    public void setTokenAdmin (ITestContext context) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
-            System.out.println(tokenAdmin);
-        }
+        String body = """
+                {
+                 "email": "admin@gmail.com",
+                 "password": "pass9876"
+                }
+                """;
+        tokenAdmin = "Bearer " +
 
-        else if (methodName.getName().contains("Auth")) {
+                given()
+                        .header("Content-Type", "application/json")
+                        .body(body)
+                        .when()
+                        .post("http://localhost:3000" + Endpoint.Login)
+                        .then()
+                        .extract().jsonPath().get("access_token");
 
-            tokenUser = "Bearer " + getTokenUser();
+        context.setAttribute("token", tokenAdmin);
 
-        }
+
+
+    }
+
+
+    @BeforeClass
+    public void setTokenUser (ITestContext context) {
+
+        String body = """
+                    {
+                     "email": "user@gmail.com",
+                     "password": "pass9876"
+                    }
+                    """;
+        tokenUser = "Bearer " +
+
+                given()
+                        .header("Content-Type", "application/json")
+                        .body(body)
+                        .when()
+                        .post("http://localhost:3000" + Endpoint.Login)
+                        .then()
+                        .extract().jsonPath().get("access_token");
+
+        context.setAttribute("token", tokenUser);
+
+
     }
 
 
@@ -40,6 +75,7 @@ public class StudentTest extends Config {
     public void createStudentAuth() {
 
         given()
+                .header("Authorization", tokenUser)
                 .multiPart("firstName", "Shushan")
                 .multiPart("lastName", "Mirzakhanyan")
                 .multiPart("middleName", "Atom")
@@ -48,57 +84,15 @@ public class StudentTest extends Config {
                 .multiPart("isWarVeteran", false)
                 .multiPart("birthDate", "2020-04-30T14:38:46.550Z")
                 .multiPart("studentImage",uploads.getStudentImage1() , "image/png")
+
         .when()
                 .post("/students")
-        .then();
-
-    }
-
-    @Test
-    public void verifyUpdateStudentIdAuth() {
-        // student id should take from db
-
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Single_Student)
         .then()
-                .assertThat().statusCode(200);
-
-
-    }
-
-    @Test
-    public void verifyUpdateStudentIdUnauthorized() {
-        // student id should take from db
-
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Single_Student)
-        .then()
-                .assertThat().statusCode(200);
-
+                .assertThat().statusCode(201)
+                .body("id", notNullValue());
 
     }
 
-
-    @Test
-    public void verifyUpdateStudentIdAuthNotFound() {
-        studentId = random.getRndId();
-
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Single_Student)
-        .then()
-                .assertThat().statusCode(404)
-                .body("message", equalTo("Student not found"));
-
-
-    }
 
 
     @Test
@@ -128,8 +122,9 @@ public class StudentTest extends Config {
                 .assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
-
     }
+
+
     //user cant delete student, only admin can
     @Test
     public void verifyDeleteStudentIdAuth() {
@@ -150,7 +145,7 @@ public class StudentTest extends Config {
 
     @Test
     public void verifyDeleteStudentIdAdminNotFound() {
-        studentId = random.getRndId();
+        studentId = invalidId;
 
         given()
                 .header("Authorization", tokenAdmin)
@@ -162,11 +157,6 @@ public class StudentTest extends Config {
                 .body("message", equalTo("Student not found"));
 
     }
-
-
-
-
-
 
 
 }
