@@ -125,7 +125,7 @@ public class StudentTest extends ConfigMeta {
     }
 
 
-    //user cant delete student, only admin can
+    //users cant delete student, only admin can
     @Test
     public void verifyDeleteStudentIdAuth() {
         // student id should take from db

@@ -6,7 +6,7 @@ import org.bson.Document;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
-import org.example.User;
+import org.example.Users;
 import org.testng.ITestContext;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -15,7 +15,7 @@ import java.lang.reflect.Method;
 
 import static io.restassured.RestAssured.given;
 
-public class UserTest extends Config {
+public class UsersTest extends Config {
     private String firstName;
     private String lastName;
     private String email;
@@ -27,8 +27,8 @@ public class UserTest extends Config {
 
     Randomize random = new Randomize();
     Methods methods = new Methods();
-    User user;
-    User userWithFile;
+    Users users;
+    Users usersWithFile;
 
     @BeforeMethod
     public void setToken (Method methodName, ITestContext context) {
@@ -62,12 +62,12 @@ public class UserTest extends Config {
         lastName = random.getRndName();
         email = random.getRndEmail();
         phone = "98775545";
-        role = "user";
+        role = "users";
         password = "new";
        // file = " ";
 
 
-        user  = new User(
+        users = new Users(
                 firstName,
                 lastName,
                 email,
@@ -76,7 +76,7 @@ public class UserTest extends Config {
                 phone
         );
 
-        userWithFile  = new User(
+        usersWithFile = new Users(
                 firstName,
                 lastName,
                 email,
@@ -99,7 +99,7 @@ public class UserTest extends Config {
 
         given()
                 .header("Authorization", "Bearer " + token )
-                .body(methods.toJsonString(user))
+                .body(methods.toJsonString(users))
         .when()
                 .post(Endpoint.All_Users)
         .then();
@@ -113,7 +113,7 @@ public class UserTest extends Config {
 
         given()
                 .header("Authorization", "Bearer " + token )
-                .body(methods.toJsonString(userWithFile))
+                .body(methods.toJsonString(usersWithFile))
 
         .when()
                 .post(Endpoint.All_Users)
@@ -127,7 +127,7 @@ public class UserTest extends Config {
 
 
         given()
-                .body(methods.toJsonString(user))
+                .body(methods.toJsonString(users))
         .when()
                 .post(Endpoint.All_Users)
         .then();
@@ -140,7 +140,7 @@ public class UserTest extends Config {
 
         given()
                 .header("Authorization", "Bearer " + token )
-                .body(methods.toJsonString(user))
+                .body(methods.toJsonString(users))
         .when()
                 .post(Endpoint.All_Users)
         .then();
@@ -173,7 +173,7 @@ public class UserTest extends Config {
 
 
     @Test
-    public void verifyGetUsersByLastNameAuth() {
+    public void verifyGetUserByLastNameAuth() {
         //query param lastName
 
         given()
@@ -185,7 +185,7 @@ public class UserTest extends Config {
     }
 
     @Test
-    public void verifyGetUsersByLastNameUnauthorized() {
+    public void verifyGetUserByLastNameUnauthorized() {
         //query param lastName
 
         given()
@@ -198,7 +198,7 @@ public class UserTest extends Config {
 
 
     @Test
-    public void verifyGetUsersByEmailAuth() {
+    public void verifyGetUserByEmailAuth() {
         //query param email
 
         given()
@@ -211,7 +211,7 @@ public class UserTest extends Config {
     }
 
     @Test
-    public void verifyGetUsersByEmailUnauthorized() {
+    public void verifyGetUserByEmailUnauthorized() {
         //query param email
 
 

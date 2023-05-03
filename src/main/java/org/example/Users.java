@@ -1,6 +1,6 @@
 package org.example;
 
-public class User {
+public class Users {
     private String firstName;
     private String lastName;
     private String email;
@@ -9,7 +9,7 @@ public class User {
     private String role;
     private String file;
 
-    public User(String firstName, String lastName, String email, String password, String phone, String role, String file) {
+    public Users(String firstName, String lastName, String email, String password, String phone, String role, String file) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
@@ -19,7 +19,7 @@ public class User {
         this.file = file;
     }
 
-    public User(String firstName, String lastName, String email, String password, String phone, String role) {
+    public Users(String firstName, String lastName, String email, String password, String phone, String role) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
@@ -86,7 +86,7 @@ public class User {
 
     @Override
     public String toString() {
-        return "User{" +
+        return "Users{" +
                 "firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +

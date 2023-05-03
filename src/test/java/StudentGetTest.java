@@ -94,8 +94,6 @@ public class StudentGetTest extends Config {
                 .body("size()", equalTo(expectedCount));
 
 
-
-
     }
 
     @Test
@@ -244,7 +242,7 @@ public class StudentGetTest extends Config {
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("Course"," ")
+                .queryParam("Courses"," ")
                 .when()
                 .get(Endpoint.All_Students)
                 .then()
