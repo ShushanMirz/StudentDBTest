@@ -59,4 +59,15 @@ public class IndividualInterviews {
         this.student = student;
     }
 
+
+    @Override
+    public String toString() {
+        return "IndividualInterviews{" +
+                "date='" + date + '\'' +
+                ", note='" + note + '\'' +
+                ", learningPace='" + learningPace + '\'' +
+                ", issues='" + issues + '\'' +
+                ", student='" + student + '\'' +
+                '}';
+    }
 }

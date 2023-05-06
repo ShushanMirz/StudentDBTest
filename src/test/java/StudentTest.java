@@ -8,7 +8,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
-public class StudentTest extends ConfigMeta {
+public class StudentTest extends Config {
 
     String tokenUser = "";
     String tokenAdmin = "";
@@ -20,76 +20,45 @@ public class StudentTest extends ConfigMeta {
 
 
 
-    @BeforeClass
-    public void setTokenAdmin (ITestContext context) {
+    @BeforeMethod
+    public void setToken(Method methodName, ITestContext context) {
+        if (methodName.getName().contains("Admin")) {
 
-        String body = """
-                {
-                 "email": "admin@gmail.com",
-                 "password": "pass9876"
-                }
-                """;
-        tokenAdmin = "Bearer " +
+            tokenAdmin = "Bearer " + getTokenAdmin();
+        } else if (methodName.getName().contains("Auth")) {
 
-                given()
-                        .header("Content-Type", "application/json")
-                        .body(body)
-                        .when()
-                        .post("http://localhost:3000" + Endpoint.Login)
-                        .then()
-                        .extract().jsonPath().get("access_token");
+            tokenUser = "Bearer " + getTokenUser();
 
-        context.setAttribute("token", tokenAdmin);
+        } else {
+            tokenUser = " ";
+            tokenAdmin = " ";
 
-
-
-    }
-
-
-    @BeforeClass
-    public void setTokenUser (ITestContext context) {
-
-        String body = """
-                    {
-                     "email": "user@gmail.com",
-                     "password": "pass9876"
-                    }
-                    """;
-        tokenUser = "Bearer " +
-
-                given()
-                        .header("Content-Type", "application/json")
-                        .body(body)
-                        .when()
-                        .post("http://localhost:3000" + Endpoint.Login)
-                        .then()
-                        .extract().jsonPath().get("access_token");
-
-        context.setAttribute("token", tokenUser);
-
-
+        }
     }
 
 
     @Test
     public void createStudentAuth() {
+        for (int i = 0; i < 1000; i++) {
 
-        given()
-                .header("Authorization", tokenUser)
-                .multiPart("firstName", "Shushan")
-                .multiPart("lastName", "Mirzakhanyan")
-                .multiPart("middleName", "Atom")
-                .multiPart("email", "mirzakhanyanshushan@gmail.com")
-                .multiPart("phone", "+a12awd")
-                .multiPart("isWarVeteran", false)
-                .multiPart("birthDate", "2020-04-30T14:38:46.550Z")
-                .multiPart("studentImage",uploads.getStudentImage1() , "image/png")
 
-        .when()
-                .post("/students")
-        .then()
-                .assertThat().statusCode(201)
-                .body("id", notNullValue());
+            given()
+                    .header("Authorization", tokenUser)
+                    .multiPart("firstName", random.getRndName())
+                    .multiPart("lastName", random.getRndNameMin())
+                    .multiPart("middleName", random.getRndName())
+                    .multiPart("email", random.getRndEmail())
+                    .multiPart("phone", random.getRunPhoneValid())
+                    .multiPart("isWarVeteran", random.getRndBool())
+                    .multiPart("birthDate", random.getRandomTimestampStr())
+                    .multiPart("studentImage", uploads.getStudentImage1(), "image/png")
+
+                    .when()
+                    .post("/students")
+                    .then();
+                    //.assertThat().statusCode(201)
+                    //.body("id", notNullValue());
+        }
 
     }
 

@@ -57,4 +57,14 @@ public class Groups {
         this.end = end;
     }
 
+    @Override
+    public String toString() {
+        return "Groups{" +
+                "name='" + name + '\'' +
+                ", course='" + course + '\'' +
+                ", wave='" + wave + '\'' +
+                ", start='" + start + '\'' +
+                ", end='" + end + '\'' +
+                '}';
+    }
 }

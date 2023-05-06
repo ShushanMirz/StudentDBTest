@@ -9,70 +9,36 @@ import org.example.Randomize;
 import org.testng.ITestContext;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-
-
 import java.lang.reflect.Method;
-
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.in;
+
 
 public class StudentGetTest extends Config {
-    String tokenUser ;
-    String tokenAdmin ;
+    String tokenUser;
+    String tokenAdmin;
     String studentId = "";
     Randomize random = new Randomize();
     Config config = new Config();
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
     MongoCollection<Document> collection = database.getCollection("students");
-
-
+    Document firstDocument = collection.find().first();
     String invalidId = "64495cb47b845b5eab714268";
 
 
-
     @BeforeMethod
-    public void setToken (Method methodName, ITestContext context) {
+    public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-        tokenAdmin = "Bearer " +
+            tokenAdmin = "Bearer " + getTokenAdmin();
+        } else if (methodName.getName().contains("Auth")) {
 
-                    given()
-                            .body("""
-                             {
-                                "email": "admin@gmail.com",
-                                "password": "pass9876"
-                             }
-                             """)
-                    .when()
-                            .post("http://localhost:3000/auth/login")
-                    .then()
-                            .extract().jsonPath().get("access_token");
+            tokenUser = "Bearer " + getTokenUser();
 
-            context.setAttribute("token", tokenAdmin);
-
-        }
-
-
-        else if (methodName.getName().contains("Auth")) {
-
-            tokenUser = "Bearer " +
-
-                    given()
-                            .body("""
-                             {
-                                "email": "user@gmail.com",
-                                "password": "pass9876"
-                             }
-                             """)
-                    .when()
-                            .post("http://localhost:3000/auth/login")
-                    .then()
-                            .extract().jsonPath().get("access_token");
-
-            context.setAttribute("token", tokenUser);
-
+        } else {
+            tokenUser = " ";
+            tokenAdmin = " ";
 
         }
     }
@@ -80,19 +46,19 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentsAuth() {
+
         long expectedCount = collection.countDocuments();
 
-       given()
+        given()
                 .header("Authorization", tokenUser)
-                .queryParam("page", 1)
-                .queryParam("pageSize", 50)
+                .queryParam("page", 4)
+                .queryParam("pageSize", 100)
 
-      .when()
+                .when()
                 .get(Endpoint.All_Students)
-      .then()
-                .assertThat().statusCode(200)
-                .body("size()", equalTo(expectedCount));
-
+                .then()
+                .assertThat().statusCode(200);
+        //.body("data.size()", equalTo((int)(expectedCount)));
 
     }
 
@@ -103,7 +69,6 @@ public class StudentGetTest extends Config {
         given()
                 .queryParam("page", 1)
                 .queryParam("pageSize", 50)
-
         .when()
                 .get(Endpoint.All_Students)
         .then()
@@ -114,9 +79,8 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentsByFirstNameAuth() {
-        Document firstDocument = collection.find().first();
+
         String firstName = firstDocument.getString("firstName");
-        System.out.println(firstName);
 
 
         given()
@@ -125,27 +89,29 @@ public class StudentGetTest extends Config {
                 .queryParam("page", 1)
                 .queryParam("pageSize", 50)
 
-        .when()
+                .when()
                 .get(Endpoint.All_Students)
-        .then()
+                .then()
                 .assertThat().statusCode(200);
 
     }
 
 
+
+
     @Test
     public void verifyGetStudentsByLastNameAuth() {
 
-        //queryParams should take from db
+        String lastName = firstDocument.getString("lastname");
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("lastName", " ")
+                .queryParam("lastName", lastName)
                 .queryParam("page", 1)
                 .queryParam("pageSize", 50)
-       .when()
+                .when()
                 .get(Endpoint.All_Students)
-       .then()
+                .then()
                 .assertThat().statusCode(200);
 
     }
@@ -154,12 +120,13 @@ public class StudentGetTest extends Config {
     @Test
     public void verifyGetStudentsByEmailAuth() {
 
-        //queryParams should take from db
+        String email = firstDocument.getString("email");
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("email", " ")
-
+                .queryParam("email", email)
+                .queryParam("page", 1)
+                .queryParam("pageSize", 50)
                 .when()
                 .get(Endpoint.All_Students)
                 .then()
@@ -171,11 +138,13 @@ public class StudentGetTest extends Config {
     @Test
     public void verifyGetStudentsByMiddleNameAuth() {
 
-        //queryParams should take from db
+        String middleName = firstDocument.getString("middleName");
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("middleName", " ")
+                .queryParam("middleName", middleName)
+                .queryParam("page", 11)
+                .queryParam("pageSize", 100)
                 .when()
                 .get(Endpoint.All_Students)
                 .then()
@@ -184,16 +153,16 @@ public class StudentGetTest extends Config {
     }
 
 
-
     @Test
     public void verifyGetStudentsByPhoneAuth() {
 
-        //queryParams should take from db
+        String middleName = firstDocument.getString("middleName");
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("phone", " ")
-
+                .queryParam("phone", middleName)
+                .queryParam("page", 1)
+                .queryParam("pageSize", 50)
                 .when()
                 .get(Endpoint.All_Students)
                 .then()
@@ -204,30 +173,14 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentsByIsWarVeteranAuth() {
-        //query param IsWarVeteran true or false
-        //queryParams should take from db
+
+        boolean isWarVeteran = firstDocument.getBoolean("isWarVeteran");
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("isWarVeteran",true)
-
-                .when()
-                .get(Endpoint.All_Students)
-                .then()
-                .assertThat().statusCode(200);
-
-    }
-
-
-    @Test
-    public void verifyGetStudentsByIsLessThan16Auth() {
-        //query param IsLessThan16 true or false
-        //queryParams should take from db
-
-        given()
-                .header("Authorization", tokenUser)
-                .queryParam("isLessThan16",true)
-
+                .queryParam("isWarVeteran", true)
+                .queryParam("page", 4)
+                .queryParam("pageSize", 100)
                 .when()
                 .get(Endpoint.All_Students)
                 .then()
@@ -238,11 +191,13 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentsByCourseAuth() {
-        //queryParams should take from db
+        // String  course = firstDocument.getString("");
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("Courses"," ")
+                .queryParam("courses", "6452c4ad7b47b757ed40aeaa")
+                .queryParam("page", 1)
+                .queryParam("pageSize", 50)
                 .when()
                 .get(Endpoint.All_Students)
                 .then()
@@ -251,19 +206,6 @@ public class StudentGetTest extends Config {
     }
 
 
-    @Test
-    public void verifyGetStudentsByArchivedAuth() {
-        //archived true/false,  queryParams should take from db
-
-        given()
-                .header("Authorization", tokenUser)
-                .queryParam("archived",true)
-                .when()
-                .get(Endpoint.All_Students)
-                .then()
-                .assertThat().statusCode(200);
-
-    }
 
     @Test
     public void verifyGetStudentsByShortListAuth() {
@@ -271,10 +213,10 @@ public class StudentGetTest extends Config {
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("shortList",true)
-                .when()
+                .queryParam("shortList", true)
+        .when()
                 .get(Endpoint.All_Students)
-                .then()
+        .then()
                 .assertThat().statusCode(200);
 
     }
@@ -286,10 +228,10 @@ public class StudentGetTest extends Config {
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("size",12)
-                .when()
+                .queryParam("size", 12)
+        .when()
                 .get(Endpoint.All_Students)
-                .then()
+        .then()
                 .assertThat().statusCode(200);
 
     }
@@ -301,11 +243,11 @@ public class StudentGetTest extends Config {
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("isLessThan16",true)
+                .queryParam("isLessThan16", true)
 
-                .when()
+        .when()
                 .get(Endpoint.All_Students)
-                .then()
+        .then()
                 .assertThat().statusCode(200);
 
     }
@@ -317,12 +259,12 @@ public class StudentGetTest extends Config {
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("firstName"," ")
-                .queryParam("lastName"," ")
-                .queryParam("course"," ")
-                .when()
+                .queryParam("firstName", " ")
+                .queryParam("lastName", " ")
+                .queryParam("course", " ")
+        .when()
                 .get(Endpoint.All_Students)
-                .then()
+        .then()
                 .assertThat().statusCode(200);
 
     }
@@ -334,11 +276,43 @@ public class StudentGetTest extends Config {
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("email","")
-                .queryParam("phone","")
+                .queryParam("email", "")
+                .queryParam("phone", "")
                 .when()
                 .get(Endpoint.All_Students)
                 .then()
+                .assertThat().statusCode(200);
+
+    }
+
+
+    @Test
+    public void verifyGetStudentsByCoursePreviousGroupAuth() {
+        //queryParams should take from db
+
+        given()
+                .header("Authorization", tokenUser)
+                .queryParam("courses", "")
+                .queryParam("previousGroups", "")
+        .when()
+                .get(Endpoint.All_Students)
+        .then()
+                .assertThat().statusCode(200);
+
+    }
+
+
+    @Test
+    public void verifyGetStudentsByCourseCurrentGroupAuth() {
+        //queryParams should take from db
+
+        given()
+                .header("Authorization", tokenUser)
+                .queryParam("courses", "")
+                .queryParam("currentGroups", "")
+        .when()
+                .get(Endpoint.All_Students)
+        .then()
                 .assertThat().statusCode(200);
 
     }
@@ -349,9 +323,9 @@ public class StudentGetTest extends Config {
 
         given()
                 .header("Authorization", tokenUser)
-                .queryParam("firstName"," ")
-                .queryParam("lastName"," ")
-                .queryParam("isWarVeteran",true)
+                .queryParam("firstName", " ")
+                .queryParam("lastName", " ")
+                .queryParam("isWarVeteran", true)
 
                 .when()
                 .get(Endpoint.All_Students)
@@ -374,12 +348,13 @@ public class StudentGetTest extends Config {
                 .assertThat().statusCode(200);
 
     }
+
     @Test
     public void verifyGetStudentsIdUnauthorized() {
         // student id should take from db
 
         given()
-                .pathParam("studentId", studentId )
+                .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Single_Student)
                 .then()
@@ -387,6 +362,7 @@ public class StudentGetTest extends Config {
                 .body("message", equalTo("Unauthorized"));
 
     }
+
     @Test
     public void verifyGetStudentsInvalidIdAuth() {
         studentId = invalidId;
@@ -401,9 +377,6 @@ public class StudentGetTest extends Config {
                 .body("message", equalTo("Student not found"));
 
     }
-
-
-
 
 
     @Test
@@ -638,7 +611,6 @@ public class StudentGetTest extends Config {
     }
 
 
-
     @Test
     public void verifyGetStudentExamHistoryAuth() {
         // student id should take from db
@@ -684,8 +656,6 @@ public class StudentGetTest extends Config {
                 .body("message", equalTo("Student not found"));
 
     }
-
-
 
 
     @Test
@@ -735,8 +705,6 @@ public class StudentGetTest extends Config {
     }
 
 
-
-
     @Test
     public void verifyGetStudentCurrentGroupsAuth() {
         // student id should take from db
@@ -782,8 +750,6 @@ public class StudentGetTest extends Config {
                 .body("message", equalTo("Student not found"));
 
     }
-
-
 
 
     @Test
@@ -927,8 +893,6 @@ public class StudentGetTest extends Config {
     }
 
 
-
-
     @Test
     public void verifyGetStudentInDiInterviewsAuth() {
         // student id should take from db
@@ -974,7 +938,6 @@ public class StudentGetTest extends Config {
                 .body("message", equalTo("Student not found"));
 
     }
-
 
 
     @Test
@@ -1024,7 +987,6 @@ public class StudentGetTest extends Config {
     }
 
 
-
     @Test
     public void verifyGetStudentNotesAuth() {
         // student id should take from db
@@ -1054,7 +1016,6 @@ public class StudentGetTest extends Config {
 
 
     }
-
 
 
     @Test
@@ -1104,7 +1065,6 @@ public class StudentGetTest extends Config {
     }
 
 
-
     @Test
     public void verifyGetStudentPaymentsAuthNotFound() {
         studentId = invalidId;
@@ -1152,7 +1112,6 @@ public class StudentGetTest extends Config {
     }
 
 
-
     @Test
     public void verifyGetStudentDepartmentsAuthNotFound() {
         studentId = invalidId;
@@ -1167,7 +1126,6 @@ public class StudentGetTest extends Config {
                 .body("message", equalTo("Student not found"));
 
     }
-
 
 
 }

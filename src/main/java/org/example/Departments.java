@@ -28,4 +28,11 @@ public class Departments {
         this.head = head;
     }
 
+    @Override
+    public String toString() {
+        return "Departments{" +
+                "name='" + name + '\'' +
+                ", head='" + head + '\'' +
+                '}';
+    }
 }

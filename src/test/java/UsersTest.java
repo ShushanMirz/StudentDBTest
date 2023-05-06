@@ -12,6 +12,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.lang.reflect.Method;
+import java.util.PrimitiveIterator;
 
 import static io.restassured.RestAssured.given;
 
@@ -23,37 +24,33 @@ public class UsersTest extends Config {
     private String role;
     private  String phone;
     private String file;
-    private String token;
+    private String tokenUser;
+    private String tokenAdmin;
+
 
     Randomize random = new Randomize();
     Methods methods = new Methods();
     Users users;
     Users usersWithFile;
 
+
     @BeforeMethod
-    public void setToken (Method methodName, ITestContext context) {
-        if (methodName.getName().contains("Auth")) {
+    public void setToken(Method methodName, ITestContext context) {
+        if (methodName.getName().contains("Admin")) {
 
-            String body = """ 
-                    { 
-                     "email": "mirzakhanyanshushan@gmail.com",
-                     "password": "Shushan12"
-                    }
-                    """;
-            token =
+            tokenAdmin = "Bearer " + getTokenAdmin();
+        } else if (methodName.getName().contains("Auth")) {
 
-                    given()
-                            .body(body)
-                            .when()
-                            .post(Endpoint.Login)
-                            .then()
-                            .extract().jsonPath().get("access_token");
+            tokenUser = "Bearer " + getTokenUser();
 
-            context.setAttribute("token", token);
-
+        } else {
+            tokenUser = " ";
+            tokenAdmin = " ";
 
         }
     }
+
+
 
     @BeforeMethod
     public void initData(Method methodName) {
@@ -98,7 +95,7 @@ public class UsersTest extends Config {
 
 
         given()
-                .header("Authorization", "Bearer " + token )
+                .header("Authorization", "Bearer " + tokenAdmin )
                 .body(methods.toJsonString(users))
         .when()
                 .post(Endpoint.All_Users)
@@ -112,7 +109,7 @@ public class UsersTest extends Config {
 
 
         given()
-                .header("Authorization", "Bearer " + token )
+                .header("Authorization", "Bearer " + tokenAdmin )
                 .body(methods.toJsonString(usersWithFile))
 
         .when()
@@ -139,7 +136,7 @@ public class UsersTest extends Config {
         //should take already existed email
 
         given()
-                .header("Authorization", "Bearer " + token )
+                .header("Authorization", "Bearer " + tokenAdmin )
                 .body(methods.toJsonString(users))
         .when()
                 .post(Endpoint.All_Users)
@@ -152,7 +149,7 @@ public class UsersTest extends Config {
         //query param firstName
 
         given()
-                .header("Authorization", "Bearer " + token )
+                .header("Authorization", "Bearer " + tokenAdmin )
         .when()
                 .get(Endpoint.All_Users)
         .then();
@@ -177,7 +174,7 @@ public class UsersTest extends Config {
         //query param lastName
 
         given()
-                .header("Authorization", "Bearer " + token )
+                .header("Authorization", "Bearer " + tokenAdmin )
         .when()
                 .get(Endpoint.All_Users)
         .then();
@@ -202,7 +199,7 @@ public class UsersTest extends Config {
         //query param email
 
         given()
-                .header("Authorization", "Bearer " + token )
+                .header("Authorization", "Bearer " + tokenAdmin )
 
         .when()
                 .get(Endpoint.All_Users)
@@ -226,11 +223,11 @@ public class UsersTest extends Config {
     @Test
     public void verifyGetUserIdAuth() {
 
-        String userId = " "; //take from db
+        String id = " "; //take from db
 
         given()
-                .header("Authorization", "Bearer " + token )
-                .pathParam("userId", userId)
+                .header("Authorization", "Bearer " + tokenAdmin )
+                .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)
         .then();
@@ -240,10 +237,10 @@ public class UsersTest extends Config {
     @Test
     public void verifyGetUserIdUnauthorized() {
         //query param email
-        String userId = " "; //take from db
+        String id = " "; //take from db
 
         given()
-                .pathParam("userId", userId)
+                .pathParam("id", id)
 
         .when()
                 .get(Endpoint.Single_User)
@@ -253,11 +250,11 @@ public class UsersTest extends Config {
     @Test
     public void verifyGetInvalidUserIdAuth() {
         //query param email
-        String userId = " "; //take from db
+        String id = " "; //take from db
 
         given()
-                .header("Authorization", "Bearer " + token )
-                .pathParam("userId", userId)
+                .header("Authorization", "Bearer " + tokenAdmin )
+                .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)
         .then();
@@ -268,11 +265,11 @@ public class UsersTest extends Config {
     @Test
     public void verifyUpdateUserInfoAdmin() {
         //existed id
-        String userId = " "; //take from db
+        String id = " "; //take from db
 
         given()
-                .header("Authorization", "Bearer " + token )
-                .pathParam("userId", userId)
+                .header("Authorization", "Bearer " + tokenAdmin )
+                .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)
         .then();
@@ -283,10 +280,10 @@ public class UsersTest extends Config {
     public void verifyUpdateUserInfoUnauthorized() {
 
         //existed id
-        String userId = " "; //take from db
+        String id = " "; //take from db
 
         given()
-                .pathParam("userId", userId)
+                .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)
         .then();
@@ -297,10 +294,10 @@ public class UsersTest extends Config {
     @Test
     public void verifyUpdateUserInfoAdminNotFound() {
         //invalid id
-        String userId = " ";
+        String id = " ";
 
         given()
-                .pathParam("userId", userId)
+                .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)
         .then();

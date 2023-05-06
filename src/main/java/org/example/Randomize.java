@@ -17,10 +17,20 @@ public class Randomize {
 
   String rndNameMin = RandomStringUtils.randomAlphabetic(2);
   String rndName = RandomStringUtils.randomAlphabetic(18);
+  String randomString= RandomStringUtils.randomAlphabetic(18);
+
+  public String getRandomString() {
+    return randomString;
+  }
+
+  public void setRandomString(String randomString) {
+    this.randomString = randomString;
+  }
+
   Boolean rndBool = RandomUtils.nextBoolean();
 
-  String rndPhoneInValid = RandomStringUtils.randomNumeric(1000000,9999999);
-  int runPhoneValid = RandomUtils.nextInt(10000000,99999999);
+
+  String runPhoneValid = RandomStringUtils.randomAlphanumeric(12);
 
   Instant start = LocalDateTime.of(2023, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC); // Start date
   Instant end = LocalDateTime.of(2025, 12, 31, 23, 59, 59).toInstant(ZoneOffset.UTC); // End date
@@ -120,19 +130,12 @@ public class Randomize {
     this.rndWrongNum = rndWrongNum;
   }
 
-  public String getRndPhoneInValid() {
-    return rndPhoneInValid;
-  }
 
-  public void setRndPhoneInValid(String rndPhoneInValid) {
-    this.rndPhoneInValid = rndPhoneInValid;
-  }
-
-  public int getRunPhoneValid() {
+  public String getRunPhoneValid() {
     return runPhoneValid;
   }
 
-  public void setRunPhoneValid(int runPhoneValid) {
+  public void setRunPhoneValid(String  runPhoneValid) {
     this.runPhoneValid = runPhoneValid;
   }
 

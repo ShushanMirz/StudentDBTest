@@ -2,7 +2,9 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import io.restassured.response.Response;
 import org.bson.Document;
+import org.example.BasePage;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
@@ -11,9 +13,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 import static io.restassured.RestAssured.given;
@@ -25,100 +25,66 @@ public class StudentUpdateTest extends Config {
     String tokenAdmin = "";
     Randomize random = new Randomize();
     Methods method = new Methods();
-
-    List<Object> activatedBadges = new ArrayList<>();
-    List<Object> ta = new ArrayList<>();
-    List<Object> indiInterviews = new ArrayList<>();
-    List<Object> skills = new ArrayList<>();
-    List<Object> notes = new ArrayList<>();
-    List<Object> paymentHistory = new ArrayList<>();
-    List<Object> departments = new ArrayList<>();
-    List<Object> emergencyContact = new ArrayList<>();
-    List<Object> educationInfo = new ArrayList<>();
-    List<Object> workExperience = new ArrayList<>();
-    List<Object> admissionHistory = new ArrayList<>();
-    List<Object> examHistory = new ArrayList<>();
-    List<Object> commLogs = new ArrayList<>();
-    List<Object> currentGroup = new ArrayList<>();
-    List<Object> previousGroup = new ArrayList<>();
-    List<Object> student = new ArrayList<>();
+    BasePage basePage = new BasePage();
 
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
-    MongoCollection<org.bson.Document> collection = database.getCollection("students");
-    Document firstDocument = collection.find().first();
-    String studentId = firstDocument.getString("_id");
-
+    MongoCollection<Document> students = database.getCollection("students");
+    Document firstDocument = students.find().first();
+    MongoCollection<Document> departments = database.getCollection("departments");
+    Document department = departments.find().first();
 
     @BeforeMethod
-    public void setToken (Method methodName, ITestContext context) {
+    public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " +
+            tokenAdmin = "Bearer " + getTokenAdmin();
+        } else if (methodName.getName().contains("Auth")) {
 
-                    given()
-                            .body("""
-                             {
-                                "email": "admin@gmail.com",
-                                "password": "pass9876"
-                             }
-                             """)
-                            .when()
-                            .post("http://localhost:3000/auth/login")
-                            .then()
-                            .extract().jsonPath().get("access_token");
+            tokenUser = "Bearer " + getTokenUser();
 
-            context.setAttribute("token", tokenAdmin);
-
-        }
-
-
-        else if (methodName.getName().contains("Auth")) {
-
-            tokenUser = "Bearer " +
-
-                    given()
-                            .body("""
-                             {
-                                "email": "user@gmail.com",
-                                "password": "pass9876"
-                             }
-                             """)
-                            .when()
-                            .post("http://localhost:3000/auth/login")
-                            .then()
-                            .extract().jsonPath().get("access_token");
-
-            context.setAttribute("token", tokenUser);
-
+        } else {
+            tokenUser = " ";
+            tokenAdmin = " ";
 
         }
     }
+
 
 
     @Test
     public void verifyUpdateStudentIdAuth() {
-        // student id should take from db
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Single_Student;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-                .body(method.toJsonString(student))
-        .when()
-                .patch(Endpoint.Single_Student)
-        .then()
-                .assertThat().statusCode(200);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("firstName", random.getRandomString());
+        ((Map<String, Object>) requestBody).put("lastName",random.getRndName());
+        ((Map<String, Object>) requestBody).put("middleName",random.getRndName());
+        ((Map<String, Object>) requestBody).put("email", random.getRndEmail());
+        ((Map<String, Object>) requestBody).put("phone", random.getRunPhoneValid());
+        ((Map<String, Object>) requestBody).put("isWarVeteran", random.getRndBool());
+        ((Map<String, Object>) requestBody).put("birthDate", random.getRandomTimestampStr());
+
+        Response response = basePage.sendPatchRequest(endpoint,headers,requestBody,id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message",equalTo("Student successfully updated."));
 
 
     }
 
+
     @Test
     public void verifyUpdateStudentIdUnauthorized() {
+        Object studentId = firstDocument.getObjectId("_id").toHexString();
 
 
         given()
                 .pathParam("studentId", studentId)
-                .body(method.toJsonString(student))
+                .body(method.toJsonString(studentId))
         .when()
                 .patch(Endpoint.Single_Student)
         .then()
@@ -130,12 +96,12 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthNotFound() {
-        studentId = "64495cb47b845b5eab714268";
+        String studentId = "64495cb47b845b5eab714268";
 
         given()
                 .header("Authorization", tokenUser)
                 .pathParam("studentId", studentId)
-                .body(method.toJsonString(student))
+                .body(method.toJsonString(studentId))
         .when()
                 .patch(Endpoint.Single_Student)
         .then()
@@ -147,12 +113,12 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthInvalidData() {
-        studentId = random.getRndId();
+       String studentId = random.getRndId();
 
         given()
                 .header("Authorization", tokenUser)
                 .pathParam("studentId", studentId)
-                .body(method.toJsonString(student))
+                .body(method.toJsonString(studentId))
         .when()
                 .patch(Endpoint.Single_Student)
         .then()
@@ -165,12 +131,12 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthEmergencyContact() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
                 .pathParam("studentId", studentId)
-                .body(method.toJsonString(emergencyContact))
+                .body(method.toJsonString(studentId))
         .when()
                 .patch(Endpoint.Students_Emergency_Contact)
         .then()
@@ -181,11 +147,11 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedEmergencyContact() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
-                .body(method.toJsonString(emergencyContact))
+                .body(method.toJsonString(studentId))
         .when()
                 .patch(Endpoint.Students_Emergency_Contact)
 
@@ -198,7 +164,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthEducationInformation() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -213,7 +179,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedEducationInformation() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -228,7 +194,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthWorkExperience() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -243,7 +209,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedWorkExperience() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -260,7 +226,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthAdmissionHistory() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -275,7 +241,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedAdmissionHistory() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -291,7 +257,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthExamHistory() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -306,7 +272,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedExamHistory() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -322,7 +288,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthCommLogs() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -337,7 +303,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedCommLogs() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -353,7 +319,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthCurrentGroups() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -368,7 +334,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedCurrentGroups() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -384,7 +350,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthPreviousGroups() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -399,7 +365,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedPreviousGroups() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -414,7 +380,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthBadges() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -429,7 +395,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedBadges() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -445,7 +411,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthTa() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -460,7 +426,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedTa() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -477,7 +443,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthIndiInterviews() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -492,7 +458,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedIndiInterviews() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -508,7 +474,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthSkills() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -523,7 +489,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedSkills() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -540,7 +506,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthNotes() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -555,7 +521,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedNotes() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -573,7 +539,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthPayments() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .header("Authorization", tokenUser)
@@ -588,7 +554,7 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedPayments() {
-        // student id should take from db
+        Object studentId = firstDocument.getObjectId("_id");
 
         given()
                 .pathParam("studentId", studentId)
@@ -602,34 +568,42 @@ public class StudentUpdateTest extends Config {
     }
 
 
-
-
     @Test
     public void verifyUpdateStudentIdAuthDepartments() {
-        // student id should take from db
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Departments)
-        .then()
-                .assertThat().statusCode(200);
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Departments;
+        String departmentsId = department.getObjectId("_id").toHexString();
+        List<Object> departmentId = new ArrayList<>();
+        departmentId.add(departmentsId);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("departments",departmentId);
+
+        Response response = basePage.sendPatchRequest(endpoint,headers,requestBody,id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message",equalTo("Departments successfully updated."));
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedDepartments() {
-        // student id should take from db
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Departments;
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Departments)
-        .then()
-                .assertThat().statusCode(401)
-                .body("message", equalTo("Unauthorized"));
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("departments",random.getRandomString());
+
+
+        Response response = basePage.sendPatchRequest(endpoint,headers,requestBody,id);
+        response
+                .then().assertThat().statusCode(401)
+                .body("message",equalTo("Unauthorized"));
 
 
     }

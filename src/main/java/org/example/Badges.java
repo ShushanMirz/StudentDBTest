@@ -39,4 +39,12 @@ public class Badges {
         this.prerequisites = prerequisites;
     }
 
+    @Override
+    public String toString() {
+        return "Badges{" +
+                "name='" + name + '\'' +
+                ", course='" + course + '\'' +
+                ", prerequisites=" + prerequisites +
+                '}';
+    }
 }

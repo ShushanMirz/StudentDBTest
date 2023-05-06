@@ -28,4 +28,11 @@ public class Skills {
         this.level = level;
     }
 
+    @Override
+    public String toString() {
+        return "Skills{" +
+                "name='" + name + '\'' +
+                ", level='" + level + '\'' +
+                '}';
+    }
 }
