@@ -191,18 +191,18 @@ public class DepartmentsTest extends Config {
 
 
     @Test
-    public void verifyDeleteDepartmentByIdAuthNotFound() {
+    public void verifyDeleteDepartmentByIdAdminNotFound() {
 
         String endpoint = Endpoint.Single_Department;
         String id = "64495cb47b845b5eab714268";
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", tokenAdmin);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(404)
-                .body("message", equalTo("Department not found"));
+                .body("message", equalTo("Department is not found."));
 
 
     }
@@ -250,7 +250,7 @@ public class DepartmentsTest extends Config {
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", tokenUser);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -282,15 +282,16 @@ public class DepartmentsTest extends Config {
     @Test
     public void verifyUpdateDepartmentUnauthorized() {
 
-        String endpoint = Endpoint.All_Departments;
+        String endpoint = Endpoint.Single_Department;
         Object head = headOfDepartment.getObjectId("_id").toHexString();
+        String id = department.getObjectId("_id").toHexString();
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", tokenUser);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", random.getRandomString());
         ((Map<String, Object>) requestBody).put("head", head);
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody,id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -302,7 +303,7 @@ public class DepartmentsTest extends Config {
         String endpoint = Endpoint.Single_Department;
         Object head = headOfDepartment.getObjectId("_id").toHexString();
         String id = department.getObjectId("_id").toHexString();
-        String sameName = "NCdrbJqqtnUwiGXEIe";
+        String sameName = "NLGaKgjGtwTVJmnepz";
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", tokenUser);
         Object requestBody = new HashMap<>();
@@ -315,6 +316,26 @@ public class DepartmentsTest extends Config {
                 .body("message", equalTo("Department with that name already exists"));
 
     }
+
+
+    @Test
+    public void verifyUpdateDepartmentAuth() {
+        String endpoint = Endpoint.Single_Department;
+        Object head = headOfDepartment.getObjectId("_id").toHexString();
+        String id = department.getObjectId("_id").toHexString();
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("name", random.getRndName());
+        ((Map<String, Object>) requestBody).put("head", head);
+
+        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Department successfully updated"));
+
+    }
+
 
 
 

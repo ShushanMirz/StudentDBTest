@@ -198,5 +198,149 @@ public class BadgesTest extends Config {
     }
 
 
+    @Test
+    public void verifyDeleteBadgeByIdAdminNotFound() {
+
+        String endpoint = Endpoint.Single_Badge;
+        String id = "64495cb47b845b5eab714268";
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenAdmin);
+
+        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        response
+                .then().assertThat().statusCode(404)
+                .body("message", equalTo("Badge is not found"));
+
+
+    }
+
+    @Test
+    public void verifyDeleteBadgeByIdAdmin() {
+
+        String endpoint = Endpoint.Single_Badge;
+        String id = badge.getObjectId("_id").toHexString();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenAdmin);
+
+        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Badge successfully deleted"));
+
+
+    }
+
+    @Test
+    public void verifyDeleteBadgeByIdAuthForbidden() {
+
+        String endpoint = Endpoint.Single_Badge;
+        String id = badge.getObjectId("_id").toHexString();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+
+        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        response
+                .then().assertThat().statusCode(403)
+                .body("message", equalTo("Forbidden resource"));
+
+
+    }
+
+    @Test
+    public void verifyDeleteBadgeByIdUnauthorized() {
+
+        String endpoint = Endpoint.Single_Department;
+        String id = badge.getObjectId("_id").toHexString();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+
+        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        response
+                .then().assertThat().statusCode(401)
+                .body("message", equalTo("Unauthorized"));
+
+
+    }
+
+    @Test
+    public void verifyUpdateBadgeAuthCourseNotFound() {
+
+        String endpoint = Endpoint.Single_Badge;
+        String courseNotFound = "64495cb47b845b5eab714268";
+        String id = badge.getObjectId("_id").toHexString();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("name", random.getRandomString());
+        ((Map<String, Object>) requestBody).put("course", courseNotFound);
+
+
+        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(404)
+                .body("message",equalTo("Course is not found"));
+
+    }
+
+    @Test
+    public void verifyUpdateBadgeUnauthorized() {
+
+        String endpoint = Endpoint.Single_Badge;
+        String id = badge.getObjectId("_id").toHexString();
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("name", random.getRandomString());
+
+
+        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody,id);
+        response
+                .then().assertThat().statusCode(401)
+                .body("message", equalTo("Unauthorized"));
+    }
+
+
+    @Test
+    public void verifyUpdateBadgeSameNameAuth() {
+        String endpoint = Endpoint.Single_Badge;
+        Object courseId = course.getObjectId("_id").toHexString();
+        String id = badge.getObjectId("_id").toHexString();
+        String sameName = "FQDWiKBAzobJNtuJpD";
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("name", sameName);
+        ((Map<String, Object>) requestBody).put("Course", courseId);
+
+        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(409)
+                .body("message", equalTo("Badge with that name already exists"));
+
+    }
+
+
+    @Test
+    public void verifyUpdateBadgeAuth() {
+        String endpoint = Endpoint.Single_Badge;
+        Object courseId = course.getObjectId("_id").toHexString();
+        String id = badge.getObjectId("_id").toHexString();
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", tokenUser);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("name", random.getRndName());
+        ((Map<String, Object>) requestBody).put("course", courseId);
+
+        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Badge successfully updated"));
+
+    }
 
 }

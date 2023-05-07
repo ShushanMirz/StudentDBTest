@@ -2,7 +2,9 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import io.restassured.response.Response;
 import org.bson.Document;
+import org.example.BasePage;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
@@ -10,8 +12,12 @@ import org.testng.ITestContext;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 
 
 public class StudentGetTest extends Config {
@@ -20,11 +26,13 @@ public class StudentGetTest extends Config {
     String studentId = "";
     Randomize random = new Randomize();
     Config config = new Config();
+    BasePage basePage = new BasePage();
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
     MongoCollection<Document> collection = database.getCollection("students");
     Document firstDocument = collection.find().first();
     String invalidId = "64495cb47b845b5eab714268";
+    String id = " ";
 
 
     @BeforeMethod
@@ -43,56 +51,51 @@ public class StudentGetTest extends Config {
         }
     }
 
+    Map<String, String> headers = new HashMap<>();
+    Map<String, Object> queryParams = new HashMap<>();
+
+    String endpoint  = Endpoint.All_Students;
 
     @Test
     public void verifyGetStudentsAuth() {
 
-        long expectedCount = collection.countDocuments();
+        headers.put("Authorization", tokenUser);
+        queryParams.put("page",1);
+        queryParams.put("pageSize",50);
+        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        response
+                .then().assertThat().statusCode(200);
+        //What should I check?
 
-        given()
-                .header("Authorization", tokenUser)
-                .queryParam("page", 4)
-                .queryParam("pageSize", 100)
-
-                .when()
-                .get(Endpoint.All_Students)
-                .then()
-                .assertThat().statusCode(200);
-        //.body("data.size()", equalTo((int)(expectedCount)));
 
     }
 
     @Test
     public void verifyGetStudentsUnauthorized() {
 
+        headers.put("Authorization", tokenUser);
+        queryParams.put("page",1);
+        queryParams.put("pageSize",50);
 
-        given()
-                .queryParam("page", 1)
-                .queryParam("pageSize", 50)
-        .when()
-                .get(Endpoint.All_Students)
-        .then()
-                .assertThat().statusCode(401)
+        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
     }
 
     @Test
-    public void verifyGetStudentsByFirstNameAuth() {
+    public void verifyGetStudentsByFirstNameSearchAuth() {
 
         String firstName = firstDocument.getString("firstName");
-
-
-        given()
-                .header("Authorization", tokenUser)
-                .queryParam("firstName", firstName)
-                .queryParam("page", 1)
-                .queryParam("pageSize", 50)
-
-                .when()
-                .get(Endpoint.All_Students)
-                .then()
-                .assertThat().statusCode(200);
+        headers.put("Authorization", tokenUser);
+        queryParams.put("page",1);
+        queryParams.put("pageSize",50);
+        queryParams.put("searchString",firstName);
+        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("data[0].firstName", equalTo(firstName));
 
     }
 
@@ -100,43 +103,39 @@ public class StudentGetTest extends Config {
 
 
     @Test
-    public void verifyGetStudentsByLastNameAuth() {
+    public void verifyGetStudentsByLastNameSearchAuth() {
 
-        String lastName = firstDocument.getString("lastname");
-
-        given()
-                .header("Authorization", tokenUser)
-                .queryParam("lastName", lastName)
-                .queryParam("page", 1)
-                .queryParam("pageSize", 50)
-                .when()
-                .get(Endpoint.All_Students)
-                .then()
-                .assertThat().statusCode(200);
+        String firstName = firstDocument.getString("lastName");
+        headers.put("Authorization", tokenUser);
+        queryParams.put("page",90);
+        queryParams.put("pageSize",10);
+        queryParams.put("firstName",firstName);
+        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("data[0].firstName", equalTo(firstName));
 
     }
 
 
     @Test
-    public void verifyGetStudentsByEmailAuth() {
+    public void verifyGetStudentsByEmailSearchAuth() {
 
         String email = firstDocument.getString("email");
 
-        given()
-                .header("Authorization", tokenUser)
-                .queryParam("email", email)
-                .queryParam("page", 1)
-                .queryParam("pageSize", 50)
-                .when()
-                .get(Endpoint.All_Students)
-                .then()
-                .assertThat().statusCode(200);
-
+        headers.put("Authorization", tokenUser);
+        queryParams.put("page",90);
+        queryParams.put("pageSize",10);
+        queryParams.put("email",email);
+        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("data[0].email", equalTo(email));
     }
 
 
     @Test
-    public void verifyGetStudentsByMiddleNameAuth() {
+    public void verifyGetStudentsByMiddleNameSearchAuth() {
 
         String middleName = firstDocument.getString("middleName");
 
@@ -154,7 +153,7 @@ public class StudentGetTest extends Config {
 
 
     @Test
-    public void verifyGetStudentsByPhoneAuth() {
+    public void verifyGetStudentsByPhoneSearchAuth() {
 
         String middleName = firstDocument.getString("middleName");
 
@@ -172,7 +171,7 @@ public class StudentGetTest extends Config {
 
 
     @Test
-    public void verifyGetStudentsByIsWarVeteranAuth() {
+    public void verifyGetStudentsByIsWarVeteranFilterAuth() {
 
         boolean isWarVeteran = firstDocument.getBoolean("isWarVeteran");
 
@@ -190,7 +189,7 @@ public class StudentGetTest extends Config {
 
 
     @Test
-    public void verifyGetStudentsByCourseAuth() {
+    public void verifyGetStudentsByCourseFilterAuth() {
         // String  course = firstDocument.getString("");
 
         given()
@@ -207,23 +206,10 @@ public class StudentGetTest extends Config {
 
 
 
+
+// page and page size are required fields
     @Test
-    public void verifyGetStudentsByShortListAuth() {
-        //what is short list, queryParams should take from db
-
-        given()
-                .header("Authorization", tokenUser)
-                .queryParam("shortList", true)
-        .when()
-                .get(Endpoint.All_Students)
-        .then()
-                .assertThat().statusCode(200);
-
-    }
-
-
-    @Test
-    public void verifyGetStudentsBySizeAuth() {
+    public void verifyGetStudentsByPageSizeAuth() {
         // size is a number, queryParams should take from db
 
         given()
@@ -235,7 +221,7 @@ public class StudentGetTest extends Config {
                 .assertThat().statusCode(200);
 
     }
-
+    // page and page size are required fields
     @Test
     public void verifyGetStudentsByPageAuth() {
         // page is number, queryParams should take from db
@@ -254,7 +240,7 @@ public class StudentGetTest extends Config {
 
 
     @Test
-    public void verifyGetStudentsByFirstNameLastNameCourseAuth() {
+    public void verifyGetStudentsByFirstNameSearchCourseFilterAuth() {
         //queryParams should take from db
 
         given()
@@ -269,9 +255,9 @@ public class StudentGetTest extends Config {
 
     }
 
-
+// need  to be updated
     @Test
-    public void verifyGetStudentsByEmailPhoneAuth() {
+    public void verifyGetStudentsByAuth() {
         //queryParams should take from db
 
         given()
@@ -287,7 +273,7 @@ public class StudentGetTest extends Config {
 
 
     @Test
-    public void verifyGetStudentsByCoursePreviousGroupAuth() {
+    public void verifyGetStudentsByCoursePreviousGroupFilterAuth() {
         //queryParams should take from db
 
         given()
@@ -303,7 +289,7 @@ public class StudentGetTest extends Config {
 
 
     @Test
-    public void verifyGetStudentsByCourseCurrentGroupAuth() {
+    public void verifyGetStudentsByCourseCurrentGroupFilterAuth() {
         //queryParams should take from db
 
         given()
@@ -318,7 +304,7 @@ public class StudentGetTest extends Config {
     }
 
     @Test
-    public void verifyGetStudentsByFirstNameLastNameIsWarVeteranAuth() {
+    public void verifyGetStudentsByFirstNameSearchIsWarVeteranFilterAuth() {
         //queryParams should take from db
 
         given()
@@ -1098,15 +1084,16 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentDepartmentsUnauthorized() {
-        // student id should take from db
+        endpoint = Endpoint.Students_Departments;
+        id = invalidId;
 
-        given()
-                .pathParam("studentId", studentId)
-                .when()
-                .get(Endpoint.Students_Departments)
-                .then()
-                .assertThat().statusCode(401)
-                .body("message", equalTo("Unauthorized"));
+        headers.put("Authorization", tokenUser);
+        queryParams.put("page",2);
+        queryParams.put("pageSize",50);
+        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        response
+                .then().assertThat().statusCode(401)
+                .body("message",equalTo("Unauthorized"));
 
 
     }
@@ -1114,16 +1101,16 @@ public class StudentGetTest extends Config {
 
     @Test
     public void verifyGetStudentDepartmentsAuthNotFound() {
-        studentId = invalidId;
+        endpoint = Endpoint.Students_Departments;
+        id = invalidId;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-                .when()
-                .get(Endpoint.Students_Departments)
-                .then()
-                .assertThat().statusCode(404)
-                .body("message", equalTo("Student not found"));
+        headers.put("Authorization", tokenUser);
+        queryParams.put("page",2);
+        queryParams.put("pageSize",50);
+        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        response
+                .then().assertThat().statusCode(404)
+                .body("message",equalTo("Student not found"));
 
     }
 

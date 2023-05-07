@@ -4,6 +4,7 @@ import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
+import java.io.File;
 import java.util.Map;
 
 public class BasePage {
@@ -42,7 +43,7 @@ public class BasePage {
     }
 
 
-    public Response sendGetRequestQuery(String endpoint, Map<String, ?> headers, Map<String, String> queryParams, String id) {
+    public Response sendGetRequestQuery(String endpoint, Map<String, ?> headers, Map<String, ?> queryParams, String id) {
         RestAssured.baseURI = "http://localhost:3000";
         RequestSpecification request = RestAssured.given()
                 .queryParams(queryParams)
@@ -65,6 +66,18 @@ public class BasePage {
         return response;
     }
 
+
+    public Response sendPostRequest(String endpoint, Map<String, ?> headers, Map<String, ?> formParams, String filePath) {
+        RestAssured.baseURI = "http://localhost:3000";
+        RequestSpecification request = RestAssured.given()
+                .headers(headers)
+                .multiPart("file", new File(filePath));
+        for (Map.Entry<String, ?> entry : formParams.entrySet()) {
+            request.multiPart(entry.getKey(), entry.getValue());
+        }
+        Response response = request.post(endpoint);
+        return response;
+    }
 
 
 }

@@ -39,7 +39,7 @@ public class StudentTest extends Config {
 
     @Test
     public void createStudentAuth() {
-        for (int i = 0; i < 1000; i++) {
+
 
 
             given()
@@ -60,7 +60,7 @@ public class StudentTest extends Config {
                     //.body("id", notNullValue());
         }
 
-    }
+
 
 
 
