@@ -19,13 +19,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class DepartmentsTest extends Config {
-    private String tokenUser = "";
-    private String tokenAdmin = "";
+    private String token = "";
+
 
     private String name = " ";
     private String head = " ";
     Randomize random = new Randomize();
-    BasePage basePage = new BasePage();
+    HTTPRequest HTTPRequest = new HTTPRequest();
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
     MongoCollection<Document> departmentsDB = database.getCollection("departments");
@@ -38,14 +38,14 @@ public class DepartmentsTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token = " ";
+
 
         }
     }
@@ -58,12 +58,12 @@ public class DepartmentsTest extends Config {
         Object head = headOfDepartment.getObjectId("_id").toHexString();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", random.getRandomString());
         ((Map<String, Object>) requestBody).put("head", head);
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(201)
                 .body("id", notNullValue());
@@ -76,12 +76,12 @@ public class DepartmentsTest extends Config {
         String endpoint = Endpoint.All_Departments;
         Object head = headOfDepartment.getObjectId("_id").toHexString();
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", random.getRandomString());
         ((Map<String, Object>) requestBody).put("head", head);
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -94,12 +94,12 @@ public class DepartmentsTest extends Config {
         Object head = headOfDepartment.getObjectId("_id").toHexString();
         String sameName = department.getString("name");
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", sameName);
         ((Map<String, Object>) requestBody).put("head", head);
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(409)
                 .body("message", equalTo("Department with that name already exists"));
@@ -112,9 +112,9 @@ public class DepartmentsTest extends Config {
         String id = "";
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(200);
         //also should check count ?
@@ -128,9 +128,9 @@ public class DepartmentsTest extends Config {
         String id = "";
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -146,9 +146,9 @@ public class DepartmentsTest extends Config {
         String id =  department1.getObjectId("_id").toHexString();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(200);
         //should I assert name? head? should I compare with value of db?
@@ -163,9 +163,9 @@ public class DepartmentsTest extends Config {
         String id =  department.getObjectId("_id").toHexString();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -179,9 +179,9 @@ public class DepartmentsTest extends Config {
         String id = "64495cb47b845b5eab714268";
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message", equalTo("Department not found"));
@@ -197,9 +197,9 @@ public class DepartmentsTest extends Config {
         String id = "64495cb47b845b5eab714268";
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenAdmin);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message", equalTo("Department is not found."));
@@ -214,9 +214,9 @@ public class DepartmentsTest extends Config {
         String id = department.getObjectId("_id").toHexString();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenAdmin);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(200)
                 .body("message", equalTo("Department successfully deleted"));
@@ -231,9 +231,9 @@ public class DepartmentsTest extends Config {
         String id = department.getObjectId("_id").toHexString();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(403)
                 .body("message", equalTo("Forbidden resource"));
@@ -248,9 +248,9 @@ public class DepartmentsTest extends Config {
         String id = department.getObjectId("_id").toHexString();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -266,13 +266,13 @@ public class DepartmentsTest extends Config {
         String id = department.getObjectId("_id").toHexString();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", random.getRandomString());
         ((Map<String, Object>) requestBody).put("head", userNotFound);
 
 
-        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message",equalTo("User is not found"));
@@ -286,12 +286,12 @@ public class DepartmentsTest extends Config {
         Object head = headOfDepartment.getObjectId("_id").toHexString();
         String id = department.getObjectId("_id").toHexString();
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", random.getRandomString());
         ((Map<String, Object>) requestBody).put("head", head);
 
-        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody,id);
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody,id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -305,12 +305,12 @@ public class DepartmentsTest extends Config {
         String id = department.getObjectId("_id").toHexString();
         String sameName = "NLGaKgjGtwTVJmnepz";
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", sameName);
         ((Map<String, Object>) requestBody).put("head", head);
 
-        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
                 .then().assertThat().statusCode(409)
                 .body("message", equalTo("Department with that name already exists"));
@@ -324,12 +324,12 @@ public class DepartmentsTest extends Config {
         Object head = headOfDepartment.getObjectId("_id").toHexString();
         String id = department.getObjectId("_id").toHexString();
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        headers.put("Authorization", token);
         Object requestBody = new HashMap<>();
         ((Map<String, String>) requestBody).put("name", random.getRndName());
         ((Map<String, Object>) requestBody).put("head", head);
 
-        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
                 .then().assertThat().statusCode(200)
                 .body("message", equalTo("Department successfully updated"));

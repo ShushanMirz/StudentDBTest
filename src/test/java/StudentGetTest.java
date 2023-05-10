@@ -4,7 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.restassured.response.Response;
 import org.bson.Document;
-import org.example.BasePage;
+import org.example.HTTPRequest;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
@@ -21,12 +21,11 @@ import static org.hamcrest.Matchers.notNullValue;
 
 
 public class StudentGetTest extends Config {
-    String tokenUser;
-    String tokenAdmin;
+    String token;
     String studentId = "";
     Randomize random = new Randomize();
     Config config = new Config();
-    BasePage basePage = new BasePage();
+    HTTPRequest HTTPRequest = new HTTPRequest();
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
     MongoCollection<Document> collection = database.getCollection("students");
@@ -39,19 +38,23 @@ public class StudentGetTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token= " ";
+
 
         }
     }
 
-    Map<String, String> headers = new HashMap<>();
+    private Map<String, String> createAuthHeader(String token) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", token);
+        return headers;
+    }
     Map<String, Object> queryParams = new HashMap<>();
 
     String endpoint  = Endpoint.All_Students;
@@ -59,10 +62,10 @@ public class StudentGetTest extends Config {
     @Test
     public void verifyGetStudentsAuth() {
 
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         queryParams.put("page",1);
         queryParams.put("pageSize",50);
-        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        Response response = HTTPRequest.GetQuery(endpoint,headers,queryParams,id);
         response
                 .then().assertThat().statusCode(200);
         //What should I check?
@@ -73,11 +76,11 @@ public class StudentGetTest extends Config {
     @Test
     public void verifyGetStudentsUnauthorized() {
 
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         queryParams.put("page",1);
         queryParams.put("pageSize",50);
 
-        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        Response response = HTTPRequest.GetQuery(endpoint,headers,queryParams,id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -88,11 +91,11 @@ public class StudentGetTest extends Config {
     public void verifyGetStudentsByFirstNameSearchAuth() {
 
         String firstName = firstDocument.getString("firstName");
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         queryParams.put("page",1);
         queryParams.put("pageSize",50);
         queryParams.put("searchString",firstName);
-        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        Response response = HTTPRequest.GetQuery(endpoint,headers,queryParams,id);
         response
                 .then().assertThat().statusCode(200)
                 .body("data[0].firstName", equalTo(firstName));
@@ -106,11 +109,11 @@ public class StudentGetTest extends Config {
     public void verifyGetStudentsByLastNameSearchAuth() {
 
         String firstName = firstDocument.getString("lastName");
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         queryParams.put("page",90);
         queryParams.put("pageSize",10);
         queryParams.put("firstName",firstName);
-        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        Response response = HTTPRequest.GetQuery(endpoint,headers,queryParams,id);
         response
                 .then().assertThat().statusCode(200)
                 .body("data[0].firstName", equalTo(firstName));
@@ -123,11 +126,11 @@ public class StudentGetTest extends Config {
 
         String email = firstDocument.getString("email");
 
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         queryParams.put("page",90);
         queryParams.put("pageSize",10);
         queryParams.put("email",email);
-        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        Response response = HTTPRequest.GetQuery(endpoint,headers,queryParams,id);
         response
                 .then().assertThat().statusCode(200)
                 .body("data[0].email", equalTo(email));
@@ -140,7 +143,7 @@ public class StudentGetTest extends Config {
         String middleName = firstDocument.getString("middleName");
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("middleName", middleName)
                 .queryParam("page", 11)
                 .queryParam("pageSize", 100)
@@ -158,7 +161,7 @@ public class StudentGetTest extends Config {
         String middleName = firstDocument.getString("middleName");
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("phone", middleName)
                 .queryParam("page", 1)
                 .queryParam("pageSize", 50)
@@ -176,7 +179,7 @@ public class StudentGetTest extends Config {
         boolean isWarVeteran = firstDocument.getBoolean("isWarVeteran");
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("isWarVeteran", true)
                 .queryParam("page", 4)
                 .queryParam("pageSize", 100)
@@ -193,7 +196,7 @@ public class StudentGetTest extends Config {
         // String  course = firstDocument.getString("");
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("courses", "6452c4ad7b47b757ed40aeaa")
                 .queryParam("page", 1)
                 .queryParam("pageSize", 50)
@@ -213,7 +216,7 @@ public class StudentGetTest extends Config {
         // size is a number, queryParams should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("size", 12)
         .when()
                 .get(Endpoint.All_Students)
@@ -228,7 +231,7 @@ public class StudentGetTest extends Config {
 
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("isLessThan16", true)
 
         .when()
@@ -244,7 +247,7 @@ public class StudentGetTest extends Config {
         //queryParams should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("firstName", " ")
                 .queryParam("lastName", " ")
                 .queryParam("course", " ")
@@ -261,7 +264,7 @@ public class StudentGetTest extends Config {
         //queryParams should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("email", "")
                 .queryParam("phone", "")
                 .when()
@@ -277,7 +280,7 @@ public class StudentGetTest extends Config {
         //queryParams should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("courses", "")
                 .queryParam("previousGroups", "")
         .when()
@@ -293,7 +296,7 @@ public class StudentGetTest extends Config {
         //queryParams should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("courses", "")
                 .queryParam("currentGroups", "")
         .when()
@@ -308,7 +311,7 @@ public class StudentGetTest extends Config {
         //queryParams should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .queryParam("firstName", " ")
                 .queryParam("lastName", " ")
                 .queryParam("isWarVeteran", true)
@@ -326,7 +329,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Single_Student)
@@ -354,7 +357,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Single_Student)
@@ -370,7 +373,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Pass_Data)
@@ -401,7 +404,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Pass_Data)
@@ -416,7 +419,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Emergency_Contact)
@@ -447,7 +450,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Emergency_Contact)
@@ -462,7 +465,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Education_Info)
@@ -493,7 +496,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Education_Info)
@@ -508,7 +511,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Work_Experience)
@@ -539,7 +542,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Work_Experience)
@@ -555,7 +558,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Admission_History)
@@ -586,7 +589,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Admission_History)
@@ -602,7 +605,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Exam_History)
@@ -633,7 +636,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Exam_History)
@@ -649,7 +652,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Comm_Logs)
@@ -680,7 +683,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Comm_Logs)
@@ -696,7 +699,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Current_Groups)
@@ -727,7 +730,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Current_Groups)
@@ -743,7 +746,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Previous_Groups)
@@ -774,7 +777,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Previous_Groups)
@@ -789,7 +792,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Badges)
@@ -821,7 +824,7 @@ public class StudentGetTest extends Config {
 
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Badges)
@@ -837,7 +840,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Ta)
@@ -868,7 +871,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Ta)
@@ -884,7 +887,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Indi_Interviews)
@@ -915,7 +918,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Indi_Interviews)
@@ -931,7 +934,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Skills)
@@ -962,7 +965,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Skills)
@@ -978,7 +981,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Notes)
@@ -1009,7 +1012,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Notes)
@@ -1025,7 +1028,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Payments)
@@ -1056,7 +1059,7 @@ public class StudentGetTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Payments)
@@ -1072,7 +1075,7 @@ public class StudentGetTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
                 .when()
                 .get(Endpoint.Students_Payments)
@@ -1087,10 +1090,10 @@ public class StudentGetTest extends Config {
         endpoint = Endpoint.Students_Departments;
         id = invalidId;
 
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         queryParams.put("page",2);
         queryParams.put("pageSize",50);
-        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        Response response = HTTPRequest.GetQuery(endpoint,headers,queryParams,id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message",equalTo("Unauthorized"));
@@ -1104,10 +1107,10 @@ public class StudentGetTest extends Config {
         endpoint = Endpoint.Students_Departments;
         id = invalidId;
 
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         queryParams.put("page",2);
         queryParams.put("pageSize",50);
-        Response response = basePage.sendGetRequestQuery(endpoint,headers,queryParams,id);
+        Response response = HTTPRequest.GetQuery(endpoint,headers,queryParams,id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message",equalTo("Student not found"));

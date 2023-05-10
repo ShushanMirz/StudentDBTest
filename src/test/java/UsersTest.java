@@ -12,6 +12,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.PrimitiveIterator;
 
 import static io.restassured.RestAssured.given;
@@ -24,8 +26,7 @@ public class UsersTest extends Config {
     private String role;
     private  String phone;
     private String file;
-    private String tokenUser;
-    private String tokenAdmin;
+    private String token;
 
 
     Randomize random = new Randomize();
@@ -38,16 +39,21 @@ public class UsersTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token = " ";
+
 
         }
+    }
+    private Map<String, String> createAuthHeader(String token) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", token);
+        return headers;
     }
 
 
@@ -95,7 +101,7 @@ public class UsersTest extends Config {
 
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
                 .body(methods.toJsonString(users))
         .when()
                 .post(Endpoint.All_Users)
@@ -109,7 +115,7 @@ public class UsersTest extends Config {
 
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
                 .body(methods.toJsonString(usersWithFile))
 
         .when()
@@ -136,7 +142,7 @@ public class UsersTest extends Config {
         //should take already existed email
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
                 .body(methods.toJsonString(users))
         .when()
                 .post(Endpoint.All_Users)
@@ -149,7 +155,7 @@ public class UsersTest extends Config {
         //query param firstName
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
         .when()
                 .get(Endpoint.All_Users)
         .then();
@@ -174,7 +180,7 @@ public class UsersTest extends Config {
         //query param lastName
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
         .when()
                 .get(Endpoint.All_Users)
         .then();
@@ -199,7 +205,7 @@ public class UsersTest extends Config {
         //query param email
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
 
         .when()
                 .get(Endpoint.All_Users)
@@ -226,7 +232,7 @@ public class UsersTest extends Config {
         String id = " "; //take from db
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
                 .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)
@@ -253,7 +259,7 @@ public class UsersTest extends Config {
         String id = " "; //take from db
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
                 .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)
@@ -268,7 +274,7 @@ public class UsersTest extends Config {
         String id = " "; //take from db
 
         given()
-                .header("Authorization", "Bearer " + tokenAdmin )
+                .header("Authorization", "Bearer " + token )
                 .pathParam("id", id)
         .when()
                 .get(Endpoint.Single_User)

@@ -4,7 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.restassured.response.Response;
 import org.bson.Document;
-import org.example.BasePage;
+import org.example.HTTPRequest;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
@@ -18,13 +18,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class CoursesTest extends Config {
-    private String tokenUser = "";
-    private String tokenAdmin = "";
+    private String token = "";
 
     private String name = " ";
     private String head = " ";
     Randomize random = new Randomize();
-    BasePage basePage = new BasePage();
+    HTTPRequest HTTPRequest = new HTTPRequest();
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
     MongoCollection<Document> coursesDb= database.getCollection("courses");
@@ -37,54 +36,50 @@ public class CoursesTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token = " ";
 
         }
     }
 
-    @Test
-    public void verifyCreateCourseAuth() {
-
-        String endpoint = Endpoint.All_Courses;
-        String departmentId =  department.getObjectId("_id").toHexString();
-
+    private Map<String, String> createAuthHeader(String token) {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("name", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("type", "course");
-        ((Map<String, String>) requestBody).put("description", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("department", departmentId);
+        headers.put("Authorization", token);
+        return headers;
+    }
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
-        response
-                .then().assertThat().statusCode(201)
-                .body("id", notNullValue());
+    public HashMap<String, Object>  courseBody(String name, String type, String description, String department) {
+        return new HashMap<>() {{
+
+            put("name", name);
+            put("type", type);
+            put("description", description);
+            put("department", department);
+
+        }};
     }
 
 
-    @Test
-    public void verifyCreateCourseModuleAuth() {
+    @Test (dataProvider = "CourseType")
+    public void verifyCreateCourseAuth(String courseType,String courseName, String testCaseName) {
 
         String endpoint = Endpoint.All_Courses;
         String departmentId =  department.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("name", random.getRndName());
-        ((Map<String, Object>) requestBody).put("type", "module");
-        ((Map<String, String>) requestBody).put("description", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("department", departmentId);
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = courseBody(
+                courseName,
+                courseType,
+                random.getRandomString(),
+                departmentId
+        );
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(201)
                 .body("id", notNullValue());
@@ -97,16 +92,16 @@ public class CoursesTest extends Config {
         String endpoint = Endpoint.All_Courses;
         String departmentId =  department.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("name", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("type", "module");
-        ((Map<String, String>) requestBody).put("description", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("department", departmentId);
+        Map<String, String> headers = createAuthHeader(token);
 
+        HashMap<String, Object> requestBody = courseBody(
+                random.getRandomString(),
+                random.getRandomString(),
+                random.getRandomString(),
+                departmentId
+        );
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -118,13 +113,12 @@ public class CoursesTest extends Config {
         String endpoint = Endpoint.All_Courses;
         String id = "";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
-                .then().assertThat().statusCode(200);
-        //also should check count ?
+                .then().assertThat().statusCode(200)
+                .body(notNullValue());
 
     }
 
@@ -134,10 +128,9 @@ public class CoursesTest extends Config {
         String endpoint = Endpoint.All_Courses;
         String id = "";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -150,12 +143,12 @@ public class CoursesTest extends Config {
         String endpoint = Endpoint.Single_Course;
         String id =  course.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
-                .then().assertThat().statusCode(200);
+                .then().assertThat().statusCode(200)
+                .body("_id",equalTo(id));
 
 
     }
@@ -167,10 +160,9 @@ public class CoursesTest extends Config {
         String endpoint = Endpoint.Single_Course;
         String id =  course.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -183,10 +175,9 @@ public class CoursesTest extends Config {
         String endpoint = Endpoint.Single_Course;
         String id = "64495cb47b845b5eab714268";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message", equalTo("Course not found"));

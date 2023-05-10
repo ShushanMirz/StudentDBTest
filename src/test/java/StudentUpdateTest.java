@@ -4,10 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.restassured.response.Response;
 import org.bson.Document;
-import org.example.BasePage;
-import org.example.Config;
-import org.example.Endpoint;
-import org.example.Randomize;
+import org.example.*;
 import org.testng.ITestContext;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -15,17 +12,13 @@ import org.testng.annotations.Test;
 import java.lang.reflect.Method;
 import java.util.*;
 
-
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.*;
 
 public class StudentUpdateTest extends Config {
 
-    String tokenUser = "";
-    String tokenAdmin = "";
+    String token = "";
     Randomize random = new Randomize();
-    Methods method = new Methods();
-    BasePage basePage = new BasePage();
+    HTTPRequest HTTPRequest = new HTTPRequest();
 
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
@@ -38,16 +31,34 @@ public class StudentUpdateTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token = " ";
 
         }
+    }
+
+    private Map<String, String> createAuthHeader(String token) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", token);
+        return headers;
+    }
+
+
+    public HashMap<String, Object> userBody(String firstName, String lastName, String middleName, String email, String phone, Object isWarVeteran, String birthDate) {
+        return new HashMap<>() {{
+            put("firstName", firstName);
+            put("lastName", lastName);
+            put("middleName", middleName);
+            put("email", email);
+            put("phone", phone);
+            put("isWarVeteran", isWarVeteran);
+            put("birthDate", birthDate);
+        }};
     }
 
 
@@ -57,21 +68,21 @@ public class StudentUpdateTest extends Config {
         String id = firstDocument.getObjectId("_id").toHexString();
         String endpoint = Endpoint.Single_Student;
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("firstName", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("lastName",random.getRndName());
-        ((Map<String, Object>) requestBody).put("middleName",random.getRndName());
-        ((Map<String, Object>) requestBody).put("email", random.getRndEmail());
-        ((Map<String, Object>) requestBody).put("phone", random.getRunPhoneValid());
-        ((Map<String, Object>) requestBody).put("isWarVeteran", random.getRndBool());
-        ((Map<String, Object>) requestBody).put("birthDate", random.getRandomTimestampStr());
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomString(),
+                random.getRndName(),
+                random.getRndName(),
+                random.getRndEmail(),
+                random.getRunPhoneValid(),
+                random.getRndBool(),
+                random.getRandomTimestampStr()
+        );
 
-        Response response = basePage.sendPatchRequest(endpoint,headers,requestBody,id);
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
                 .then().assertThat().statusCode(200)
-                .body("message",equalTo("Student successfully updated."));
+                .body("message", equalTo("Student successfully updated."));
 
 
     }
@@ -79,16 +90,24 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdUnauthorized() {
-        Object studentId = firstDocument.getObjectId("_id").toHexString();
 
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Single_Student;
 
-        given()
-                .pathParam("studentId", studentId)
-                .body(method.toJsonString(studentId))
-        .when()
-                .patch(Endpoint.Single_Student)
-        .then()
-                .assertThat().statusCode(401)
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomString(),
+                random.getRndName(),
+                random.getRndName(),
+                random.getRndEmail(),
+                random.getRunPhoneValid(),
+                random.getRndBool(),
+                random.getRandomTimestampStr()
+        );
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -96,16 +115,25 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthNotFound() {
-        String studentId = "64495cb47b845b5eab714268";
+        String id = "64495cb47b845b5eab714268";
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-                .body(method.toJsonString(studentId))
-        .when()
-                .patch(Endpoint.Single_Student)
-        .then()
-                .assertThat().statusCode(404)
+
+        String endpoint = Endpoint.Single_Student;
+
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomString(),
+                random.getRndName(),
+                random.getRndName(),
+                random.getRndEmail(),
+                random.getRunPhoneValid(),
+                random.getRndBool(),
+                random.getRandomTimestampStr()
+        );
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(404)
                 .body("message", equalTo("Student not found"));
 
 
@@ -113,17 +141,25 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthInvalidData() {
-       String studentId = random.getRndId();
+        String id = firstDocument.getObjectId("_id").toHexString();
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-                .body(method.toJsonString(studentId))
-        .when()
-                .patch(Endpoint.Single_Student)
-        .then()
-                .assertThat().statusCode(400)
-                .body("message", equalTo(""));
+        String endpoint = Endpoint.Single_Student;
+
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = userBody(
+               " ",
+               " ",
+               " ",
+               " ",
+               " ",
+               " ",
+               " "
+        );
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(400)
+                .body("error", equalTo("Bad Request"));
 
 
     }
@@ -131,32 +167,41 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthEmergencyContact() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-                .body(method.toJsonString(studentId))
-        .when()
-                .patch(Endpoint.Students_Emergency_Contact)
-        .then()
-                .assertThat().statusCode(200);
+        String endpoint = Endpoint.Students_Emergency_Contact;
+
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("phone", "Shushan");
+        ((Map<String, Object>) requestBody).put("name", "Mirz");
+        ((Map<String, Object>) requestBody).put("relationship", "Mother");
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Emergency contact successfully updated."));
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedEmergencyContact() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .pathParam("studentId", studentId)
-                .body(method.toJsonString(studentId))
-        .when()
-                .patch(Endpoint.Students_Emergency_Contact)
+        String endpoint = Endpoint.Students_Emergency_Contact;
 
-        .then()
-                .assertThat().statusCode(401)
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("phone", "Shushan");
+        ((Map<String, Object>) requestBody).put("name", "Mirz");
+        ((Map<String, Object>) requestBody).put("relationship", "Mother");
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -164,29 +209,45 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthEducationInformation() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
+        String endpoint = Endpoint.Students_Education_Info;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Education_Info)
-        .then()
-                .assertThat().statusCode(200);
+        Map<String, String> headers = createAuthHeader(token);
 
+        List<EducationInformationRequest.EducationInformation> educationInformation = new ArrayList<>();
+        EducationInformationRequest.EducationInformation educationInfo = new EducationInformationRequest.EducationInformation(
+                random.getRandomString(),
+                random.getRandomString(),
+                random.getRandomTimestampStr(),
+                random.getRandomTimestampStr());
+        educationInformation.add(educationInfo);
+        EducationInformationRequest requestBody = new EducationInformationRequest(educationInformation);
 
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Education information successfully updated."));
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedEducationInformation() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Education_Info)
-        .then()
-                .assertThat().statusCode(401)
+        String endpoint = Endpoint.Students_Education_Info;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<EducationInformationRequest.EducationInformation> educationInformation = new ArrayList<>();
+        EducationInformationRequest.EducationInformation educationInfo = new EducationInformationRequest.EducationInformation(
+                random.getRandomString(),
+                random.getRandomString(),
+                random.getRandomTimestampStr(),
+                random.getRandomTimestampStr());
+        educationInformation.add(educationInfo);
+        EducationInformationRequest requestBody = new EducationInformationRequest(educationInformation);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -194,123 +255,245 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthWorkExperience() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Work_Experience)
-        .then()
-                .assertThat().statusCode(200);
+        String endpoint = Endpoint.Students_Work_Experience;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<WorkExperienceRequest.WorkExperience> workExperience = new ArrayList<>();
+        WorkExperienceRequest.WorkExperience workExp = new WorkExperienceRequest.WorkExperience(
+                random.getRandomString(),
+                random.getRandomString(),
+                random.getRandomTimestampStr(),
+                random.getRandomTimestampStr());
+        workExperience.add(workExp);
+        WorkExperienceRequest requestBody = new WorkExperienceRequest(workExperience);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Work experience successfully updated."));
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedWorkExperience() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Work_Experience)
-        .then()
-                .assertThat().statusCode(401)
+        String endpoint = Endpoint.Students_Work_Experience;
+
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, String>) requestBody).put("companyName", "institutionName");
+        ((Map<String, Object>) requestBody).put("positionTitle", "programName");
+        ((Map<String, Object>) requestBody).put("endDate", random.getRandomTimestampStr());
+        ((Map<String, Object>) requestBody).put("startDate", random.getRandomTimestampStr());
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
     }
 
+    @Test(dataProvider = "StateType")
+    public void verifyUpdateStudentIdAuthAdmissionHistory(String state, String testCaseName) {
+        String id = "6459121456a3b20f3c9eb96a";
+
+        String endpoint = Endpoint.Students_Admission_History;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<AdmissionHistoryRequest.AdmissionRecord> admissionHistory = new ArrayList<>();
+        AdmissionHistoryRequest.AdmissionRecord admissionRecord = new AdmissionHistoryRequest.AdmissionRecord(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                state);
+        admissionHistory.add(admissionRecord);
+        AdmissionHistoryRequest requestBody = new AdmissionHistoryRequest(admissionHistory);
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Admission history successfully updated."));
+
+
+    }
 
 
     @Test
-    public void verifyUpdateStudentIdAuthAdmissionHistory() {
-        Object studentId = firstDocument.getObjectId("_id");
+    public void verifyUpdateStudentIdAuthAdmissionHistoryInvalidState() {
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Admission_History)
-        .then()
-                .assertThat().statusCode(200);
+        String endpoint = Endpoint.Students_Admission_History;
+
+        Map<String, String> headers = createAuthHeader(token);
+
+        List<AdmissionHistoryRequest.AdmissionRecord> admissionHistory = new ArrayList<>();
+        AdmissionHistoryRequest.AdmissionRecord admissionRecord = new AdmissionHistoryRequest.AdmissionRecord(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                random.getRandomString());
+        admissionHistory.add(admissionRecord);
+        AdmissionHistoryRequest requestBody = new AdmissionHistoryRequest(admissionHistory);
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(400)
+                .body("message[0]", equalTo("admissionHistory.0.state must be one of the following values: rejected, accepted"));
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedAdmissionHistory() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Admission_History)
-        .then()
+        String endpoint = Endpoint.Students_Admission_History;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<AdmissionHistoryRequest.AdmissionRecord> admissionHistory = new ArrayList<>();
+        AdmissionHistoryRequest.AdmissionRecord admissionRecord = new AdmissionHistoryRequest.AdmissionRecord(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                random.getRandomString());
+        admissionHistory.add(admissionRecord);
+        AdmissionHistoryRequest requestBody = new AdmissionHistoryRequest(admissionHistory);
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then()
                 .assertThat().statusCode(401)
+                .body("message", equalTo("Unauthorized"));
+
+    }
+
+
+    @Test(dataProvider = "ExamType")
+    public void verifyUpdateStudentIdAuthExamHistory(String examStatus, String testCaseName) {
+        String id = "6459121456a3b20f3c9eb96a";
+
+        String endpoint = Endpoint.Students_Exam_History;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<ExamHistoryRequest.ExamResult> examHistory = new ArrayList<>();
+        ExamHistoryRequest.ExamResult examResult = new ExamHistoryRequest.ExamResult(
+                "645680f1f7c68204374b7216",
+                examStatus,
+                random.getRandomString(),
+                9);
+        examHistory.add(examResult);
+        ExamHistoryRequest requestBody = new ExamHistoryRequest(examHistory);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Exam history successfully updated."));
+
+
+    }
+
+
+    @Test(dataProvider = "ExamType")
+    public void verifyUpdateStudentIdAuthExamHistoryExamNotFound(String examStatus, String testCaseName) {
+        String id = "6459121456a3b20f3c9eb96a";
+        String invalidId = "64495bed7b845b5eab714258";
+
+        String endpoint = Endpoint.Students_Exam_History;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<ExamHistoryRequest.ExamResult> examHistory = new ArrayList<>();
+        ExamHistoryRequest.ExamResult examResult = new ExamHistoryRequest.ExamResult(
+                invalidId,
+                examStatus,
+                random.getRandomString(),
+                9);
+        examHistory.add(examResult);
+        ExamHistoryRequest requestBody = new ExamHistoryRequest(examHistory);
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(404)
+                .body("message", equalTo("Exam not found"));
+
+
+    }
+
+    @Test(dataProvider = "ExamType")
+    public void verifyUpdateStudentIdUnauthorizedExamHistory(String examStatus, String testCaseName) {
+        String id = "6459121456a3b20f3c9eb96a";
+
+        String endpoint = Endpoint.Students_Exam_History;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<ExamHistoryRequest.ExamResult> examHistory = new ArrayList<>();
+        ExamHistoryRequest.ExamResult examResult = new ExamHistoryRequest.ExamResult(
+                "645680f1f7c68204374b7216",
+                examStatus,
+                random.getRandomString(),
+                9);
+        examHistory.add(examResult);
+        ExamHistoryRequest requestBody = new ExamHistoryRequest(examHistory);
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
     }
 
+    @Test(dataProvider = "CommLogsType")
+    public void verifyUpdateStudentIdAuthCommLogsValid(String type, String testCaseName) {
+        String id = "6459121456a3b20f3c9eb96a";
 
-    @Test
-    public void verifyUpdateStudentIdAuthExamHistory() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String endpoint = Endpoint.Students_Comm_Logs;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Exam_History)
-        .then()
-                .assertThat().statusCode(200);
+        Map<String, String> headers = createAuthHeader(token);
+        List<CommLogsRequest.CommLog> commLogs = new ArrayList<>();
+        CommLogsRequest.CommLog commLog = new CommLogsRequest.CommLog(
+                random.getRandomTimestampStr(),
+                type,
+                random.getRandomString());
+        commLogs.add(commLog);
+        CommLogsRequest requestBody = new CommLogsRequest(commLogs);
 
 
-    }
-
-    @Test
-    public void verifyUpdateStudentIdUnauthorizedExamHistory() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Exam_History)
-        .then()
-                .assertThat().statusCode(401)
-                .body("message", equalTo("Unauthorized"));
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Communication logs successfully updated."));
 
 
     }
 
-
-    @Test
-    public void verifyUpdateStudentIdAuthCommLogs() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Comm_Logs)
-        .then()
-                .assertThat().statusCode(200);
-
-
-    }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedCommLogs() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = "6459121456a3b20f3c9eb96a";
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Comm_Logs)
-        .then()
-                .assertThat().statusCode(401)
+        String endpoint = Endpoint.Students_Comm_Logs;
+
+        Map<String, String> headers = createAuthHeader(token);
+        List<CommLogsRequest.CommLog> commLogs = new ArrayList<>();
+        CommLogsRequest.CommLog commLog = new CommLogsRequest.CommLog(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                random.getRandomString());
+        commLogs.add(commLog);
+        CommLogsRequest requestBody = new CommLogsRequest(commLogs);
+
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -319,29 +502,38 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthCurrentGroups() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Current_Groups;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Current_Groups)
-        .then()
-                .assertThat().statusCode(200);
+        List<Object> currentGroups = new ArrayList<>();
+        currentGroups.add("64567142ed8f626c92623a33");
+        currentGroups.add("64568941f7c68204374b72fa");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("groups", currentGroups);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200);
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedCurrentGroups() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Current_Groups;
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Current_Groups)
-        .then()
-                .assertThat().statusCode(401)
+        List<Object> currentGroups = new ArrayList<>();
+        currentGroups.add("64567142ed8f626c92623a33");
+        currentGroups.add("64568941f7c68204374b72fa");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("groups", currentGroups);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -350,29 +542,39 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthPreviousGroups() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Previous_Groups;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Previous_Groups)
-        .then()
-                .assertThat().statusCode(200);
+        List<Object> previousGroups = new ArrayList<>();
+        previousGroups.add("64567142ed8f626c92623a33");
+        previousGroups.add("64568941f7c68204374b72fa");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("groups", previousGroups);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Previuos groups successfully updated."));
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedPreviousGroups() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Previous_Groups;
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Previous_Groups)
-        .then()
-                .assertThat().statusCode(401)
+        List<Object> previousGroups = new ArrayList<>();
+        previousGroups.add("64567142ed8f626c92623a33");
+        previousGroups.add("64568941f7c68204374b72fa");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("groups", previousGroups);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -380,29 +582,36 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthBadges() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Badges;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Badges)
-        .then()
-                .assertThat().statusCode(200);
+        List<Object> activatedBadges = new ArrayList<>();
+        activatedBadges.add("645a9a8f78e334448a749625");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("activatedBadges", activatedBadges);
 
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Activated badges successfully updated."));
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedBadges() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Badges;
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Badges)
-       .then()
-                .assertThat().statusCode(401)
+        List<Object> activatedBadges = new ArrayList<>();
+        activatedBadges.add("645684acf7c68204374b7246");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("activatedBadges", activatedBadges);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -411,61 +620,37 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthTa() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Ta;
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Ta)
-        .then()
-                .assertThat().statusCode(200);
+        List<Object> taId = new ArrayList<>();
+        taId.add("64567142ed8f626c92623a33");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("ta", taId);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("TA field successfully updated."));
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedTa() {
-        Object studentId = firstDocument.getObjectId("_id");
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Ta;
 
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Ta)
-        .then()
-                .assertThat().statusCode(401)
-                .body("message", equalTo("Unauthorized"));
+        List<Object> taId = new ArrayList<>();
+        taId.add("64567142ed8f626c92623a33");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("ta", taId);
 
-
-    }
-
-
-
-    @Test
-    public void verifyUpdateStudentIdAuthIndiInterviews() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Indi_Interviews)
-        .then()
-                .assertThat().statusCode(200);
-
-
-    }
-
-    @Test
-    public void verifyUpdateStudentIdUnauthorizedIndiInterviews() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Indi_Interviews)
-        .then()
-                .assertThat().statusCode(401)
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
 
 
@@ -474,96 +659,40 @@ public class StudentUpdateTest extends Config {
 
     @Test
     public void verifyUpdateStudentIdAuthSkills() {
-        Object studentId = firstDocument.getObjectId("_id");
 
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Skills)
-                .then()
-                .assertThat().statusCode(200);
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Skills;
+
+        List<Object> skillsId = new ArrayList<>();
+        skillsId.add("645545f90164c94a3502c098");
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("skills", skillsId);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(200)
+                .body("message", equalTo("Skills field successfully updated."));
 
 
     }
 
     @Test
     public void verifyUpdateStudentIdUnauthorizedSkills() {
-        Object studentId = firstDocument.getObjectId("_id");
 
-        given()
-                .pathParam("studentId", studentId)
-                .when()
-                .patch(Endpoint.Students_Skills)
-                .then()
-                .assertThat().statusCode(401)
+        String id = firstDocument.getObjectId("_id").toHexString();
+        String endpoint = Endpoint.Students_Skills;
+        String departmentsId = department.getObjectId("_id").toHexString();
+        List<Object> skillsId = new ArrayList<>();
+        skillsId.add(departmentsId);
+        Map<String, String> headers = createAuthHeader(token);
+        Object requestBody = new HashMap<>();
+        ((Map<String, Object>) requestBody).put("skills", skillsId);
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
+        response
+                .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
-
-
-    }
-
-
-
-    @Test
-    public void verifyUpdateStudentIdAuthNotes() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Notes)
-        .then()
-                .assertThat().statusCode(200);
-
-
-    }
-
-    @Test
-    public void verifyUpdateStudentIdUnauthorizedNotes() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Notes)
-        .then()
-                .assertThat().statusCode(401)
-                .body("message", equalTo("Unauthorized"));
-
-
-    }
-
-
-
-
-    @Test
-    public void verifyUpdateStudentIdAuthPayments() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .header("Authorization", tokenUser)
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Payments)
-        .then()
-                .assertThat().statusCode(200);
-
-
-    }
-
-    @Test
-    public void verifyUpdateStudentIdUnauthorizedPayments() {
-        Object studentId = firstDocument.getObjectId("_id");
-
-        given()
-                .pathParam("studentId", studentId)
-        .when()
-                .patch(Endpoint.Students_Payments)
-        .then()
-                .assertThat().statusCode(401)
-                .body("message", equalTo("Unauthorized"));
-
 
     }
 
@@ -576,15 +705,14 @@ public class StudentUpdateTest extends Config {
         String departmentsId = department.getObjectId("_id").toHexString();
         List<Object> departmentId = new ArrayList<>();
         departmentId.add(departmentsId);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         Object requestBody = new HashMap<>();
-        ((Map<String, Object>) requestBody).put("departments",departmentId);
+        ((Map<String, Object>) requestBody).put("departments", departmentId);
 
-        Response response = basePage.sendPatchRequest(endpoint,headers,requestBody,id);
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
                 .then().assertThat().statusCode(200)
-                .body("message",equalTo("Departments successfully updated."));
+                .body("message", equalTo("Departments successfully updated."));
 
 
     }
@@ -593,21 +721,18 @@ public class StudentUpdateTest extends Config {
     public void verifyUpdateStudentIdUnauthorizedDepartments() {
         String id = firstDocument.getObjectId("_id").toHexString();
         String endpoint = Endpoint.Students_Departments;
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
         Object requestBody = new HashMap<>();
-        ((Map<String, Object>) requestBody).put("departments",random.getRandomString());
+        ((Map<String, Object>) requestBody).put("departments", random.getRandomString());
 
 
-        Response response = basePage.sendPatchRequest(endpoint,headers,requestBody,id);
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
                 .then().assertThat().statusCode(401)
-                .body("message",equalTo("Unauthorized"));
+                .body("message", equalTo("Unauthorized"));
 
 
     }
-
 
 
 }

@@ -4,7 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.restassured.response.Response;
 import org.bson.Document;
-import org.example.BasePage;
+import org.example.HTTPRequest;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
@@ -19,13 +19,13 @@ import java.util.Map;
 import static org.hamcrest.Matchers.*;
 
 public class IndividualInterviewsTest extends Config {
-    private String tokenUser = "";
-    private String tokenAdmin = "";
+    private String token = "";
+
 
     private String name = " ";
     private String head = " ";
     Randomize random = new Randomize();
-    BasePage basePage = new BasePage();
+    HTTPRequest HTTPRequest = new HTTPRequest();
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
     MongoCollection<Document> courseDb = database.getCollection("courses");
@@ -43,81 +43,52 @@ public class IndividualInterviewsTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token = " ";
+
 
         }
     }
-
-    @Test
-    public void verifyCreateInDiInterviewsNormAuth() {
-
-        String endpoint = Endpoint.All_InDi_Interviews;
-        String studentId =  student.getObjectId("_id").toHexString();
-
+    private Map<String, String> createAuthHeader(String token) {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("date", random.getRandomTimestampStr());
-        ((Map<String, Object>) requestBody).put("note", random.getRandomString());
-        ((Map<String, String>) requestBody).put("learningPace", "norm");
-        ((Map<String, Object>) requestBody).put("issues", random.getRandomString() );
-        ((Map<String, Object>) requestBody).put("student", studentId);
-
-
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
-        response
-                .then().assertThat().statusCode(201)
-                .body("id", notNullValue());
+        headers.put("Authorization", token);
+        return headers;
     }
 
+    public HashMap<String, Object> userBody(String date, String note, String learningPace, String issues, String student) {
+        return new HashMap<>() {{
+            put("date", date);
+            put("note", note);
+            put("learningPace", learningPace);
+            put("issues", issues);
+            put("student", student);
 
-    @Test
-    public void verifyCreateInDiInterviewsFastAuth() {
-
-        String endpoint = Endpoint.All_InDi_Interviews;
-        String studentId =  student.getObjectId("_id").toHexString();
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("date", random.getRandomTimestampStr());
-        ((Map<String, Object>) requestBody).put("note", random.getRandomString());
-        ((Map<String, String>) requestBody).put("learningPace", "fast");
-        ((Map<String, Object>) requestBody).put("issues", random.getRandomString() );
-        ((Map<String, Object>) requestBody).put("student", studentId);
-
-
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
-        response
-                .then().assertThat().statusCode(201)
-                .body("id", notNullValue());
+        }};
     }
 
-
-    @Test
-    public void verifyCreateInDiInterviewsSlowAuth() {
+    @Test (dataProvider = "InterviewType")
+    public void verifyCreateInDiInterviewsNormAuth(String learningPace, String testCaseName) {
 
         String endpoint = Endpoint.All_InDi_Interviews;
         String studentId =  student.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("date", random.getRandomTimestampStr());
-        ((Map<String, Object>) requestBody).put("note", random.getRandomString());
-        ((Map<String, String>) requestBody).put("learningPace", "slow");
-        ((Map<String, Object>) requestBody).put("issues", random.getRandomString() );
-        ((Map<String, Object>) requestBody).put("student", studentId);
+        Map<String, String> headers = createAuthHeader(token);
 
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                learningPace,
+                random.getRandomString(),
+                studentId
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        );
+
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(201)
                 .body("id", notNullValue());
@@ -131,17 +102,17 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.All_InDi_Interviews;
         String studentId =  student.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("date", random.getRandomTimestampStr());
-        ((Map<String, Object>) requestBody).put("note", random.getRandomString());
-        ((Map<String, String>) requestBody).put("learningPace", "slow");
-        ((Map<String, Object>) requestBody).put("issues", random.getRandomString() );
-        ((Map<String, Object>) requestBody).put("student", studentId);
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                "slow",
+                random.getRandomString(),
+                studentId
 
+        );
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -153,13 +124,13 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.All_InDi_Interviews;
         String id = "";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
-                .then().assertThat().statusCode(200);
-        //also should check count ?
+                .then().assertThat().statusCode(200)
+                .body(notNullValue());
+
 
     }
 
@@ -169,10 +140,9 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.All_InDi_Interviews;
         String id = "";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -185,12 +155,12 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id =  interview.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
-                .then().assertThat().statusCode(200);
+                .then().assertThat().statusCode(200)
+                .body("_id",equalTo(id));
 
 
     }
@@ -202,10 +172,9 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id =  interview.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -218,10 +187,9 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id = "64495cb47b845b5eab714268";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message", equalTo("Individual interview with that id not found"));
@@ -235,10 +203,9 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id = "64495cb47b845b5eab714268";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenAdmin);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message", equalTo("Individual interview with that id not found"));
@@ -252,10 +219,9 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id = interview.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenAdmin);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(200)
                 .body("message", equalTo("Individual interview successfully deleted"));
@@ -269,10 +235,9 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id = interview.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(403)
                 .body("message", equalTo("Forbidden resource"));
@@ -286,10 +251,9 @@ public class IndividualInterviewsTest extends Config {
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id = interview.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendDeleteRequest(endpoint, headers, id);
+        Response response = HTTPRequest.sendDeleteRequest(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -304,14 +268,18 @@ public class IndividualInterviewsTest extends Config {
         String invalidId = "64495cb47b845b5eab714268";
         String id = interview.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("note", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("student", invalidId);
+        Map<String, String> headers = createAuthHeader(token);
 
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                "slow",
+                random.getRandomString(),
+                invalidId
 
-        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        );
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message",equalTo("Student is not found"));
@@ -323,34 +291,44 @@ public class IndividualInterviewsTest extends Config {
 
         String endpoint = Endpoint.Single_InDi_Interviews;
         String id = interview.getObjectId("_id").toHexString();
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("date", random.getRandomTimestampStr());
+        Map<String, String> headers = createAuthHeader(token);
 
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                "slow",
+                random.getRandomString(),
+                id
 
-        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody,id);
+        );
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody,id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
     }
 
 
-    @Test
-    public void verifyUpdateInDiInterviewsAuth() {
+    @Test  (dataProvider = "InterviewType")
+    public void verifyUpdateInDiInterviewsAuth(String learningPace, String testCaseName) {
         String endpoint = Endpoint.Single_InDi_Interviews;
-        Object studentId = student.getObjectId("_id").toHexString();
-        String id = interview.getObjectId("_id").toHexString();
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("name", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("student", studentId);
+        String studentId = student.getObjectId("_id").toHexString();
 
-        Response response = basePage.sendPatchRequest(endpoint, headers, requestBody, id);
+        String id = interview.getObjectId("_id").toHexString();
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = userBody(
+                random.getRandomTimestampStr(),
+                random.getRandomString(),
+                learningPace,
+                random.getRandomString(),
+                studentId
+
+        );
+
+        Response response = HTTPRequest.Patch(endpoint, headers, requestBody, id);
         response
-                .then().assertThat().statusCode(409)
-                .body("message", equalTo("In with that name already exists"));
+                .then().assertThat().statusCode(200)
+                .body(notNullValue());
 
     }
 

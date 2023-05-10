@@ -7,11 +7,14 @@ import io.restassured.specification.RequestSpecification;
 import java.io.File;
 import java.util.Map;
 
-public class BasePage {
+public class HTTPRequest {
 
 
-    public Response sendPostRequest(String endpoint, Map<String, ?> headers, Object requestBody) {
-        RestAssured.baseURI = "http://localhost:3000";
+    String baseURI = System.getProperty("myBaseURI", "http://localhost:3000");
+
+
+    public Response Post(String endpoint, Map<String, ?> headers, Object requestBody) {
+        RestAssured.baseURI = baseURI;
         RequestSpecification request = RestAssured.given()
                 .headers(headers);
         Response response = request.body(requestBody)
@@ -19,8 +22,8 @@ public class BasePage {
         return response;
     }
 
-    public Response sendPatchRequest(String endpoint, Map<String, ?> headers, Object requestBody, String id) {
-        RestAssured.baseURI = "http://localhost:3000";
+    public Response Patch(String endpoint, Map<String, ?> headers, Object requestBody, String id) {
+        RestAssured.baseURI = baseURI;
         RequestSpecification request = RestAssured.given()
                 .headers(headers);
         if (id != null) {
@@ -31,8 +34,8 @@ public class BasePage {
         return response;
     }
 
-    public Response sendGetRequest(String endpoint, Map<String, ?> headers, String id) {
-        RestAssured.baseURI = "http://localhost:3000";
+    public Response Get(String endpoint, Map<String, ?> headers, String id) {
+        RestAssured.baseURI = baseURI;
         RequestSpecification request = RestAssured.given()
                 .headers(headers);
         if (id != null) {
@@ -43,8 +46,8 @@ public class BasePage {
     }
 
 
-    public Response sendGetRequestQuery(String endpoint, Map<String, ?> headers, Map<String, ?> queryParams, String id) {
-        RestAssured.baseURI = "http://localhost:3000";
+    public Response GetQuery(String endpoint, Map<String, ?> headers, Map<String, ?> queryParams, String id) {
+        RestAssured.baseURI = baseURI;
         RequestSpecification request = RestAssured.given()
                 .queryParams(queryParams)
                 .headers(headers);
@@ -56,7 +59,7 @@ public class BasePage {
     }
 
     public Response sendDeleteRequest(String endpoint, Map<String, ?> headers, String id) {
-        RestAssured.baseURI = "http://localhost:3000";
+        RestAssured.baseURI = baseURI;
         RequestSpecification request = RestAssured.given()
                 .headers(headers);
         if (id != null) {
@@ -67,8 +70,8 @@ public class BasePage {
     }
 
 
-    public Response sendPostRequest(String endpoint, Map<String, ?> headers, Map<String, ?> formParams, String filePath) {
-        RestAssured.baseURI = "http://localhost:3000";
+    public Response Post(String endpoint, Map<String, ?> headers, Map<String, ?> formParams, String filePath) {
+        RestAssured.baseURI = baseURI;
         RequestSpecification request = RestAssured.given()
                 .headers(headers)
                 .multiPart("file", new File(filePath));

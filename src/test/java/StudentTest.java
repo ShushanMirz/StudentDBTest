@@ -4,14 +4,16 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class StudentTest extends Config {
 
-    String tokenUser = "";
-    String tokenAdmin = "";
+    String token = "";
     String studentId = "";
     Uploads uploads = new Uploads();
     Randomize random = new Randomize();
@@ -24,16 +26,20 @@ public class StudentTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token = " ";
 
         }
+    }
+    private Map<String, String> createAuthHeader(String token) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", token);
+        return headers;
     }
 
 
@@ -43,14 +49,15 @@ public class StudentTest extends Config {
 
 
             given()
-                    .header("Authorization", tokenUser)
+                    .header("Authorization", token)
+                    .header("Content-Type","multipart/form-data")
                     .multiPart("firstName", random.getRndName())
                     .multiPart("lastName", random.getRndNameMin())
                     .multiPart("middleName", random.getRndName())
                     .multiPart("email", random.getRndEmail())
                     .multiPart("phone", random.getRunPhoneValid())
                     .multiPart("isWarVeteran", random.getRndBool())
-                    .multiPart("birthDate", random.getRandomTimestampStr())
+                    //.multiPart("birthDate", random.getRandomTimestampStr())
                     .multiPart("studentImage", uploads.getStudentImage1(), "image/png")
 
                     .when()
@@ -69,7 +76,7 @@ public class StudentTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenAdmin)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
         .when()
                 .delete(Endpoint.Single_Student)
@@ -100,7 +107,7 @@ public class StudentTest extends Config {
         // student id should take from db
 
         given()
-                .header("Authorization", tokenUser)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
         .when()
                 .delete(Endpoint.Single_Student)
@@ -117,7 +124,7 @@ public class StudentTest extends Config {
         studentId = invalidId;
 
         given()
-                .header("Authorization", tokenAdmin)
+                .header("Authorization", token)
                 .pathParam("studentId", studentId)
         .when()
                 .delete(Endpoint.Single_Student)

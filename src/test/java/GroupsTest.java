@@ -4,7 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.restassured.response.Response;
 import org.bson.Document;
-import org.example.BasePage;
+import org.example.HTTPRequest;
 import org.example.Config;
 import org.example.Endpoint;
 import org.example.Randomize;
@@ -21,13 +21,13 @@ import static org.hamcrest.Matchers.notNullValue;
 
 public class GroupsTest extends Config {
 
-    private String tokenUser = "";
-    private String tokenAdmin = "";
+    private String token = "";
+
 
     private String name = " ";
     private String head = " ";
     Randomize random = new Randomize();
-    BasePage basePage = new BasePage();
+    HTTPRequest HTTPRequest = new HTTPRequest();
     MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/studentsdb");
     MongoDatabase database = mongoClient.getDatabase("studentsdb");
     MongoCollection<Document> groupsDb = database.getCollection("groups");
@@ -42,16 +42,33 @@ public class GroupsTest extends Config {
     public void setToken(Method methodName, ITestContext context) {
         if (methodName.getName().contains("Admin")) {
 
-            tokenAdmin = "Bearer " + getTokenAdmin();
+            token = "Bearer " + getTokenAdmin();
         } else if (methodName.getName().contains("Auth")) {
 
-            tokenUser = "Bearer " + getTokenUser();
+            token = "Bearer " + getTokenUser();
 
         } else {
-            tokenUser = " ";
-            tokenAdmin = " ";
+            token = " ";
 
         }
+    }
+
+    private Map<String, String> createAuthHeader(String token) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", token);
+        return headers;
+    }
+
+    public HashMap<String, Object>  groupBody(String name, String course, String wave, String start,  String end) {
+        return new HashMap<>() {{
+
+            put("name", name);
+            put("course", course);
+            put("wave", wave);
+            put("start", start);
+            put("end", end);
+
+        }};
     }
 
     @Test
@@ -62,16 +79,16 @@ public class GroupsTest extends Config {
         String waveId =  waves.getObjectId("_id").toHexString();
 
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("name", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("course",courseId);
-        ((Map<String, String>) requestBody).put("wave", waveId);
-        ((Map<String, Object>) requestBody).put("start", random.getRandomTimestampStr());
-        ((Map<String, Object>) requestBody).put("end", random.getRandomTimestampStr());
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = groupBody(
+                random.getRandomString(),
+                courseId,
+                waveId,
+                random.getRandomTimestampStr(),
+                random.getRandomTimestampStr()
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        );
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(201)
                 .body("id", notNullValue());
@@ -86,16 +103,17 @@ public class GroupsTest extends Config {
         String waveId =  waves.getObjectId("_id").toHexString();
 
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
-        Object requestBody = new HashMap<>();
-        ((Map<String, String>) requestBody).put("name", random.getRandomString());
-        ((Map<String, Object>) requestBody).put("course",courseId);
-        ((Map<String, String>) requestBody).put("wave", waveId);
-        ((Map<String, Object>) requestBody).put("start", random.getRandomTimestampStr());
-        ((Map<String, Object>) requestBody).put("end", random.getRandomTimestampStr());
+        Map<String, String> headers = createAuthHeader(token);
+        HashMap<String, Object> requestBody = groupBody(
+                random.getRandomString(),
+                courseId,
+                waveId,
+                random.getRandomTimestampStr(),
+                random.getRandomTimestampStr()
 
-        Response response = basePage.sendPostRequest(endpoint, headers, requestBody);
+        );
+
+        Response response = HTTPRequest.Post(endpoint, headers, requestBody);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -107,13 +125,13 @@ public class GroupsTest extends Config {
         String endpoint = Endpoint.All_Groups;
         String id = "";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
-                .then().assertThat().statusCode(200);
-        //also should check count ?
+                .then().assertThat().statusCode(200)
+                .body(notNullValue());
+
 
     }
 
@@ -123,10 +141,9 @@ public class GroupsTest extends Config {
         String endpoint = Endpoint.All_Groups;
         String id = "";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -139,12 +156,12 @@ public class GroupsTest extends Config {
         String endpoint = Endpoint.Single_Group;
         String id =  group.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
-                .then().assertThat().statusCode(200);
+                .then().assertThat().statusCode(200)
+                .body("_id",equalTo(id));
 
 
     }
@@ -156,10 +173,9 @@ public class GroupsTest extends Config {
         String endpoint = Endpoint.Single_Group;
         String id =  group.getObjectId("_id").toHexString();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(401)
                 .body("message", equalTo("Unauthorized"));
@@ -172,10 +188,9 @@ public class GroupsTest extends Config {
         String endpoint = Endpoint.Single_Group;
         String id = "64495cb47b845b5eab714268";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", tokenUser);
+        Map<String, String> headers = createAuthHeader(token);
 
-        Response response = basePage.sendGetRequest(endpoint, headers, id);
+        Response response = HTTPRequest.Get(endpoint, headers, id);
         response
                 .then().assertThat().statusCode(404)
                 .body("message", equalTo("Group is not found"));
